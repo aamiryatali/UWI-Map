@@ -6,30 +6,28 @@
 
 {% block content %}
     <div id="map" style="height: 100vh; width: 100%; position: relative;"></div>
-    <input type="button" id="modeButton" value="Change Mode" class="waves-effect teal btn" 
-           style="position: fixed; bottom: 10px; left: 10px; z-index: 1000;" onclick="changeMode()">
+    <input type="button" id="modeButton" value="Change Mode" class="waves-effect teal btn" style="position: fixed; bottom: 10px; left: 10px; z-index: 1000;" onclick="changeMode()">
     <div id="pane" class="col s4" style="position: absolute; top: 10px; right: 10px; z-index: 1000; max-width: 25%; background: white; padding: 10px; border-radius: 5px; display: none;">
     </div>
 {% endblock %}
 
 {% block code %}
     <script type="text/javascript">
-        var map = L.map('map').setView([10.6464474, -61.4008066], 13); // Sets the initial map position and zoom level
-
-        // Layer group for markers
-        var layerTest = L.layerGroup(); 
-        function addMarkers(){
-            var markers = {{markers|safe}} //Sample marker coords [lat, lng]
-            for(marker of markers){
-                var marker = L.marker([marker[0], marker[1]]).addTo(map); // Adds each marker to the map
-                layerTest.addLayer(marker); // Add each marker to the layerGroup
-            }
-        }
-
-        // Filter categories
-        var overlayMaps = {
+        var map = L.map('map').setView([10.642529, -61.400225], 13); // Sets the initial map position and zoom level
+        var layerTest = L.layerGroup(); // Layer group for markers
+        var overlayMaps = {  // Filter categories
             "Test" : layerTest 
         };
+        var layerControl = L.control.layers(null, overlayMaps).addTo(map);
+        var marker = L.marker([10.6464474, -61.4008066]).addTo(map);
+        var mode = 'view';
+        marker.on('click', onMarkerClick);
+        map.on('load', addMarkers()); // Call the addMarkers() function when the map loads
+        map.on('click', onMapClick);
+
+        // Move zoom controls under the layer control toggle
+        map.zoomControl.setPosition('topright');
+        document.querySelector('.leaflet-control-zoom').style.marginTop = '50px';
 
         // GeoJSON example
         var paneTest = {
@@ -73,28 +71,24 @@
             ]
         };
 
+        L.geoJSON(paneTest, {
+            onEachFeature: onEachFeature
+        }).addTo(map);
+
+        function addMarkers(){
+            var markers = {{markers|safe}} //Grab markers from backend
+            for(marker of markers){
+                var marker = L.marker([marker[0], marker[1]]).addTo(map); // Adds each marker to the map
+                layerTest.addLayer(marker); // Add each marker to the layerGroup
+            }
+        }
+
         function onEachFeature(feature, layer) {
             if (feature.properties && feature.properties.popupContent) {
                 layer.bindPopup(feature.properties.popupContent);
             }
         }
-
-        var layerControl = L.control.layers(null, overlayMaps).addTo(map);
-        L.geoJSON(paneTest, {
-            onEachFeature: onEachFeature
-        }).addTo(map);
-
-        map.on('load', addMarkers()); // Call the addMarkers() function when the map loads
-
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            minZoom: 16,
-            maxZoom: 50,
-            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        }).addTo(map);
-
-        var marker = L.marker([10.6464474, -61.4008066]).addTo(map);
-        marker.on('click', onMarkerClick);
-
+        
         function onMarkerClick(e){
             let pane = document.querySelector('#pane');
             if(pane.innerHTML.trim() == ''){
@@ -121,7 +115,6 @@
             if(mode === 'edit'){
                 marker = L.marker(e.latlng).addTo(map).on('click', onMarkerClick);
                 alert("Added marker at " + e.latlng.toString());
-            } else {
                 let data = {x: e.latlng.lat, y: e.latlng.lng};
                 fetch("/addMarker", {
                     method: "POST",
@@ -132,8 +125,7 @@
                 });
             }
         }
-
-        var mode = 'view';
+        
         function changeMode(){
             if(mode === 'view'){
                 mode = 'edit';
@@ -143,10 +135,11 @@
                 alert('Mode changed to VIEW');
             }
         }
-        map.on('click', onMapClick);
-
-        // Move zoom controls under the layer control toggle
-        map.zoomControl.setPosition('topright');
-        document.querySelector('.leaflet-control-zoom').style.marginTop = '50px';
+        
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            minZoom: 16,
+            maxZoom: 50,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
     </script>
 {% endblock %}
