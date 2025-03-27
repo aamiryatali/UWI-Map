@@ -54,11 +54,19 @@
           }
 
           #map {
-            height: 600px;
+            left:25vw;
+            height: 100vh;
+            width: 100vw;
+          }
+
+          p{
+            left: 80vw;
+            bottom: 50vh;
+            z-index: 1000;
           }
       </style>
 
-    <div class="container" id="content">{% block content %}{% endblock %}</div>
+    <div id="content">{% block content %}{% endblock %}</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script>
