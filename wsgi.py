@@ -3,7 +3,7 @@ from flask import Flask
 from flask.cli import with_appcontext, AppGroup
 
 from App.database import db, get_migrate
-from App.models import User
+from App.models import User, Marker
 from App.main import create_app
 from App.controllers import ( create_user, get_all_users_json, get_all_users, initialize )
 
@@ -49,6 +49,13 @@ def list_user_command(format):
 
 app.cli.add_command(user_cli) # add the group to the cli
 
+@user_cli.command("list-markers", help="Lists markers in the database")
+def list_user_command():
+    list = Marker.query.all()
+    for m in list:
+        print(f'{m.x} | {m.y}')
+
+app.cli.add_command(user_cli) # add the group to the cli
 '''
 Test Commands
 '''
