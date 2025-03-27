@@ -5,9 +5,157 @@
 {{ super() }}
 
 {% block content %}
-    <h1>Flask MVC</h1>
+    <!-- <h1>Flask MVC</h1>
     {% if is_authenticated %}
         <p> Welcome {{current_user.username}} </p>
     {% endif %}
-    <p>This is a boileplate flask application which follows the MVC pattern for structuring the project.</p>
+    <p>This is a boileplate flask application which follows the MVC pattern for structuring the project.</p> -->
+    <input type="file" accept="image/*">
+    <div id="pane" class="col s4">
+
+    </div>
+    <div id="map" class="offset-s4 col s8 inline"></div>
+    <input type="button" id="modeButton" value="Change Mode" class="waves-effect teal btn" onclick="changeMode()">
+        <p>Change Mode</p>
+    </div>
+    
+{% endblock %}
+
+{% block code %}
+    <script type="text/javascript">
+        var map = L.map('map').setView([10.6464474, -61.4008066], 13)
+        var layerTest = L.layerGroup();
+        function addMarkers(){
+            var markers = [[10.649009708224797, -61.399766540398446], [10.64886209134631, -61.401328623642975]]
+            for(marker of markers){
+                console.log([marker[0], marker[1]])
+                var marker = L.marker([marker[0], marker[1]]).addTo(map);
+                layerTest.addLayer(marker)
+            }
+        }
+
+        var overlayMaps = {
+            "Test" : layerTest
+        };
+        
+        var paneTest = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                "type": "Feature",
+                "properties": {
+                    "name": "Test Pane",
+                    "amenity": "Polygon",
+                    "popupContent": "Test popup for polygon"
+                },
+                "geometry": {
+                    "coordinates": [
+                    [
+                        [
+                        -61.39998930812794,
+                        10.638831871955404
+                        ],
+                        [
+                        -61.39953237900065,
+                        10.638589128766455
+                        ],
+                        [
+                        -61.39937801105165,
+                        10.638661951743003
+                        ],
+                        [
+                        -61.399538553718685,
+                        10.63901999779469
+                        ],
+                        [
+                        -61.39998930812794,
+                        10.638831871955404
+                        ]
+                    ]
+                    ],
+                    "type": "Polygon"
+                }
+                }
+            ]
+        }
+
+        function onEachFeature(feature, layer) {
+            // does this feature have a property named popupContent?
+            if (feature.properties && feature.properties.popupContent) {
+                layer.bindPopup(feature.properties.popupContent);
+            }
+        }
+
+        var layerControl = L.control.layers(null, overlayMaps).addTo(map);
+        //var paneLayer = L.geoJSON().addTo(map);
+        //paneLayer.addData(paneTest, {onEachFeature: onEachFeature});
+        L.geoJSON(paneTest, {
+            onEachFeature: onEachFeature
+        }).addTo(map);
+
+        map.on('load', addMarkers());
+
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            minZoom:16,
+            maxZoom: 50,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+        var marker = L.marker([10.6464474, -61.4008066]).addTo(map)
+        marker.on('click', onMarkerClick);
+
+        function onMarkerClick(e){
+            let pane = document.querySelector('#pane')
+            console.log(`clicked,  pane.innerHTMl = ${pane.innerHTML}`);
+            if(pane.innerHTML.trim() == ''){
+                html = `<div class="container col s1" onclick="closeContainer()">
+                    <p style="margin-left: 1em;">Coordinates are ${e.latlng}</p>
+                    <img src='https://media1.tenor.com/m/t6VAu8neEjkAAAAd/cat-vro.gif' width='150' height='150' style="margin-left:1em;">
+                    </div>`
+                pane.innerHTML = html;
+            } else {
+                closeContainer();
+            }
+        }
+
+        var popup = L.popup()
+        function closeContainer(){
+            let container = document.querySelector('#pane');
+            pane.innerHTML = '';
+        }
+
+        function onMapClick(e){
+            console.log(`clicked at ${e.latlng}`);
+            if(mode === 'edit'){
+                marker = L.marker(e.latlng).addTo(map).on('click', onMarkerClick);
+                alert("Added marker at " + e.latlng.toString())
+            } else {
+                let data = {x: e.latlng.lat, y: e.latlng.lng}
+                fetch("/addMarker", {
+                    method: "POST",
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                }).then(res => {
+                    console.log(`Added ${e.latlng} to database`);
+                });
+            }
+        /*popup
+            .setLatLng(e.latlng)
+            .setContent("Testing popup at " + e.latlng.toString())
+            .openOn(map);*/
+        }
+
+        var mode = 'view';
+        function changeMode(){
+            if(mode === 'view'){
+                mode = 'edit';
+                alert('Mode changed to EDIT');
+            } else {
+                mode = 'view';
+                alert('Mode changed to VIEW');
+            }
+        }
+        map.on('click', onMapClick);
+    
+        //marker.bindPopup("<h1 id='text'>big popup</h1>");
+    </script>
 {% endblock %}
