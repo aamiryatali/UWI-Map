@@ -21,7 +21,6 @@
         </form>
     </div>
     <div id="map" class="offset-s6"></div>
-    <div id="map" class="offset-s6"></div>
     <input type="button" id="modeButton" value="Change Mode" class="waves-effect teal btn" onclick="changeMode()">
         <p>Change Mode</p>
     </div>
@@ -34,21 +33,25 @@
 
 {% block code %}
     <script type="text/javascript">
-        var map = L.map('map').setView([10.6464474, -61.4008066], 13)
-        var layerTest = L.layerGroup();
+        var map = L.map('map').setView([10.6464474, -61.4008066], 13) // Sets the initial map position and zoom level
+
+        //This is a layerGroup, you can add markers to the group and later only show markers from the group to implement a filter.
+        var layerTest = L.layerGroup(); 
         function addMarkers(){
-            var markers = [[10.649009708224797, -61.399766540398446], [10.64886209134631, -61.401328623642975]]
+            var markers = [[10.649009708224797, -61.399766540398446], [10.64886209134631, -61.401328623642975]] //Sample marker coords [lat, lng]
             for(marker of markers){
                 console.log([marker[0], marker[1]])
-                var marker = L.marker([marker[0], marker[1]]).addTo(map);
-                layerTest.addLayer(marker)
+                var marker = L.marker([marker[0], marker[1]]).addTo(map); //Adds each marker to the map using coords, and store the marker object in a variable
+                layerTest.addLayer(marker) //Add each marker to the layerGroup we made earlier for testing purposes.
             }
         }
 
+        //Creates filter categories. The name of the filter that will be displayed is "Test", and it links to the layerTest group of markers we made earlier.
         var overlayMaps = {
-            "Test" : layerTest
+            "Test" : layerTest 
         };
         
+        //This creates the blue shape overlayed on the map(near JFK). Making these suck dont worry about this for now
         var paneTest = {
             "type": "FeatureCollection",
             "features": [
@@ -90,6 +93,7 @@
             ]
         }
 
+        //I can't remember what this does
         function onEachFeature(feature, layer) {
             // does this feature have a property named popupContent?
             if (feature.properties && feature.properties.popupContent) {
@@ -97,6 +101,7 @@
             }
         }
 
+        //This adds a filter button to the map, and our filters that we defined in overlayMaps earlier to it
         var layerControl = L.control.layers(null, overlayMaps).addTo(map);
         //var paneLayer = L.geoJSON().addTo(map);
         //paneLayer.addData(paneTest, {onEachFeature: onEachFeature});
@@ -104,16 +109,18 @@
             onEachFeature: onEachFeature
         }).addTo(map);
 
-        map.on('load', addMarkers());
+        map.on('load', addMarkers()); //Call the addMarkers() function when the map loads to add markers.
 
+        //Can't remember what this does
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             minZoom:16,
             maxZoom: 50,
             attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         }).addTo(map);
         var marker = L.marker([10.6464474, -61.4008066]).addTo(map)
-        marker.on('click', onMarkerClick);
+        marker.on('click', onMarkerClick); //Call onMarkerClick function when you click on the marker held in the variable above
 
+        //Adds some innerHTML to the div with the id "pane"
         function onMarkerClick(e){
             let pane = document.querySelector('#pane')
             console.log(`clicked,  pane.innerHTMl = ${pane.innerHTML}`);
@@ -129,17 +136,21 @@
         }
 
         var popup = L.popup()
+
+        //"Closes" the pane div by making the innerHTML empty
         function closeContainer(){
             let container = document.querySelector('#pane');
             pane.innerHTML = '';
         }
 
+        //Stuff with the modes
         function onMapClick(e){
             console.log(`clicked at ${e.latlng}`);
             if(mode === 'edit'){
-                marker = L.marker(e.latlng).addTo(map).on('click', onMarkerClick);
+                marker = L.marker(e.latlng).addTo(map).on('click', onMarkerClick); //Call onMarkerClick if you click anywhere on the map
                 alert("Added marker at " + e.latlng.toString())
             } else {
+                //Send a POST request to the backend to add the marker to the databse
                 let data = {x: e.latlng.lat, y: e.latlng.lng}
                 fetch("/addMarker", {
                     method: "POST",
@@ -155,6 +166,7 @@
             .openOn(map);*/
         }
 
+        //Mode implementation for testing purposes
         var mode = 'view';
         function changeMode(){
             if(mode === 'view'){
