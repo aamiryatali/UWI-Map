@@ -38,7 +38,7 @@
         //This is a layerGroup, you can add markers to the group and later only show markers from the group to implement a filter.
         var layerTest = L.layerGroup(); 
         function addMarkers(){
-            var markers = [[10.649009708224797, -61.399766540398446], [10.64886209134631, -61.401328623642975]] //Sample marker coords [lat, lng]
+            var markers = {{markers|safe}} //Sample marker coords [lat, lng]
             for(marker of markers){
                 console.log([marker[0], marker[1]])
                 var marker = L.marker([marker[0], marker[1]]).addTo(map); //Adds each marker to the map using coords, and store the marker object in a variable
