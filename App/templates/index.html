@@ -10,13 +10,23 @@
         <p> Welcome {{current_user.username}} </p>
     {% endif %}
     <p>This is a boileplate flask application which follows the MVC pattern for structuring the project.</p> -->
+    <div class="row">
+        <form method="POST" action="/georgeData">
+        <div class="card col s3" style="position:absolute; height:100vh; z-index:10000;">
+            <p class="card-content">Hi my name is bob marley</p>
+            <input type="text" class="input-field col s8" placeholder="George Name Bush">
+            <input type="submit" class="teal btn offset-s10 secondary-content">
+        </div>
+        </form>
+    </div>
+    <div id="map" class="offset-s6"></div>
+    <input type="button" id="modeButton" value="Change Mode" class="waves-effect teal btn" onclick="changeMode()">
+        <p>Change Mode</p>
+    </div>
+    <p>diojqdkqaldmqkjdiqjdqkqmdq</p>
     <input type="file" accept="image/*">
     <div id="pane" class="col s4">
 
-    </div>
-    <div id="map" class="offset-s4 col s8 inline"></div>
-    <input type="button" id="modeButton" value="Change Mode" class="waves-effect teal btn" onclick="changeMode()">
-        <p>Change Mode</p>
     </div>
     
 {% endblock %}
