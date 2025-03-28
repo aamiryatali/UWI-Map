@@ -18,12 +18,37 @@
         var overlayMaps = {  // Filter categories
             "Test" : layerTest 
         };
+        var drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+        var drawControl = new L.Control.Draw({
+            edit: {
+                featureGroup: drawnItems
+            }
+        });
         var layerControl = L.control.layers(null, overlayMaps).addTo(map);
         var marker = L.marker([10.6464474, -61.4008066]).addTo(map);
         var mode = 'view';
+
+        map.addControl(drawControl);
         marker.on('click', onMarkerClick);
-        map.on('load', addMarkers()); // Call the addMarkers() function when the map loads
+        map.on('load', addObjects()); // Call the addMarkers() function when the map loads
         map.on('click', onMapClick);
+        map.on(L.Draw.Event.CREATED, function(e){
+            var layer = e.layer;
+            console.log(layer)
+            drawnItems.addLayer(layer);
+            var geoJSON = layer.toGeoJSON()
+
+            console.log(geoJSON)
+            let data = {building: "test", data: geoJSON}
+                fetch("/addDrawing", {
+                    method: "POST",
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                }).then(res => {
+                    console.log(`Added drawing with coords ${data} to database`);
+                });
+        });
 
         // Move zoom controls under the layer control toggle
         map.zoomControl.setPosition('topright');
@@ -75,11 +100,22 @@
             onEachFeature: onEachFeature
         }).addTo(map);
 
-        function addMarkers(){
+        function addObjects(){
             var markers = {{markers|safe}} //Grab markers from backend
             for(marker of markers){
                 var marker = L.marker([marker[0], marker[1]]).addTo(map); // Adds each marker to the map
                 layerTest.addLayer(marker); // Add each marker to the layerGroup
+            }
+
+            var buildings = {{buildings|safe}}
+            for(building of buildings){
+                var name = building[0];
+                var drawingCoords = JSON.parse(building[1]);
+                //drawnItems.addLayer(drawingCoords)
+                
+                drawingCoords.properties["name"] = name;
+                console.log(drawingCoords);
+                L.geoJSON(drawingCoords).addTo(map);
             }
         }
 
