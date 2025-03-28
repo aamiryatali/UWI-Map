@@ -10,22 +10,9 @@ class Marker(db.Model):
     description = db.Column(db.String(100), nullable=True)
     buildingID = db.Column(db.Integer, db.ForeignKey('building.buildingID'))
 
-    def __init__(self, x, y, name, floor):
+    def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.name = name
-        self.image = "template"
-        self.floor = floor
-
-    def addImage(self, path):
-        self.image = path
-        db.session.add(self)
-        db.session.commit()
-
-    def addDescription(self, description):
-        self.description = description
-        db.session.add(self)
-        db.session.commit()
 
     def get_json(self):
         return{
