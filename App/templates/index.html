@@ -5,16 +5,19 @@
 {{ super() }}
 
 {% block content %}
-    <div id="map" style="height: 100vh; width: 100%; position: relative;"></div>
+    <div id="map" style="height: 100vh; width: 100%; position: fixed; top: 0; left: 0;"></div>
     <input type="button" id="modeButton" value="Change Mode" class="waves-effect teal btn" style="position: fixed; bottom: 10px; left: 10px; z-index: 1000;" onclick="changeMode()">
-    <div id="pane" class="col s4" style="position: absolute; top: 10px; right: 10px; z-index: 1000; max-width: 25%; background: white; padding: 10px; border-radius: 5px; display: none;">
+    <div id="pane" class="col s4" style="position: fixed; top: 50%; left: -300px; transform: translateY(-50%); z-index: 1000; width: 300px; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); transition: left 0.3s ease;">
     </div>
+    <button id="recenterButton" class="waves-effect btn" style="position: fixed; bottom: 74px; right: 10px; z-index: 1000; background: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; padding: 0;" onclick="recenterMap()">
+        <img src="https://www.freeiconspng.com/uploads/maps-center-direction-icon-24.png" alt="Recenter" style="width: 25px; height: 25px;">
+    </button>
 {% endblock %}
 
 {% block code %}
     <script type="text/javascript">
         var map = L.map('map').setView([10.642529, -61.400225], 13); // Sets the initial map position and zoom level
-        var layerTest = L.layerGroup(); // Layer group for markers
+        var layerTest = L.layerGroup();
         var overlayMaps = {  // Filter categories
             "Test" : layerTest 
         };
@@ -25,7 +28,7 @@
                 featureGroup: drawnItems
             }
         });
-        var layerControl = L.control.layers(null, overlayMaps).addTo(map);
+        var layerControl = L.control.layers(null, overlayMaps, { position: 'bottomright' }).addTo(map);
         var marker = L.marker([10.6464474, -61.4008066]).addTo(map);
         var mode = 'view';
 
@@ -51,8 +54,12 @@
         });
 
         // Move zoom controls under the layer control toggle
-        map.zoomControl.setPosition('topright');
-        document.querySelector('.leaflet-control-zoom').style.marginTop = '50px';
+        map.zoomControl.setPosition('bottomright');
+        document.querySelector('.leaflet-control-zoom').style.marginBottom = '47px';
+        document.querySelectorAll('.leaflet-control-zoom a').forEach(button => {
+            button.style.width = '45px';
+            button.style.height = '35px';
+        });
 
         // GeoJSON example
         var paneTest = {
@@ -127,7 +134,7 @@
         
         function onMarkerClick(e){
             let pane = document.querySelector('#pane');
-            if(pane.innerHTML.trim() == ''){
+            if (pane.innerHTML.trim() === '') {
                 let html = `
                     <div class="container col s1">
                         <button style="float: right; background: none; border: none; font-size: 1.5em; cursor: pointer;" onclick="closeContainer()">×</button>
@@ -135,7 +142,7 @@
                         <img src='https://media1.tenor.com/m/t6VAu8neEjkAAAAd/cat-vro.gif' width='150' height='150' style="margin-left:1em;">
                     </div>`;
                 pane.innerHTML = html;
-                pane.style.display = 'block';
+                pane.style.left = '10px';
             } else {
                 closeContainer();
             }
@@ -144,7 +151,7 @@
         function closeContainer(){
             let pane = document.querySelector('#pane');
             pane.innerHTML = '';
-            pane.style.display = 'none';
+            pane.style.left = '-300px';
         }
 
         function onMapClick(e){
@@ -171,11 +178,18 @@
                 alert('Mode changed to VIEW');
             }
         }
+
+        function recenterMap() {
+            map.setView([10.646447, -61.400807], 13);
+        }
         
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             minZoom: 16,
             maxZoom: 50,
             attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         }).addTo(map);
+
+        // Prevent scrolling
+        document.body.style.overflow = 'hidden';
     </script>
 {% endblock %}
