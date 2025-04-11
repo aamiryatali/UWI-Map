@@ -3,10 +3,9 @@ from flask import Flask
 from flask.cli import with_appcontext, AppGroup
 
 from App.database import db, get_migrate
-from App.models import User, Marker
+from App.models import User, Marker, Building
 from App.main import create_app
-from App.controllers import ( create_user, get_all_users_json, get_all_users, initialize )
-
+from App.controllers import ( create_user, get_all_users_json, get_all_users, initialize, create_building)
 
 # This commands file allow you to create convenient CLI commands for testing controllers
 
@@ -53,9 +52,18 @@ app.cli.add_command(user_cli) # add the group to the cli
 def list_user_command():
     list = Marker.query.all()
     for m in list:
-        print(f'{m.x} | {m.y}')
+        print(f'{m.x} | {m.y} | {m.image}')
 
 app.cli.add_command(user_cli) # add the group to the cli
+
+@user_cli.command('list-buildings', help="Lists the buildings in the database")
+def list_buildings_command():
+    buildings = Building.query.all()
+    for building in buildings:
+        print(f'{building.name} - {building.drawingCoords}')
+        
+app.cli.add_command(user_cli) # add the group to the cli
+
 '''
 Test Commands
 '''

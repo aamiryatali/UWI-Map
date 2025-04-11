@@ -5,31 +5,191 @@
 {{ super() }}
 
 {% block content %}
-    <div id="map" style="height: 100vh; width: 100%; position: relative;"></div>
-    <input type="button" id="modeButton" value="Change Mode" class="waves-effect teal btn" 
-           style="position: fixed; bottom: 10px; left: 10px; z-index: 1000;" onclick="changeMode()">
-    <div id="pane" class="col s4" style="position: absolute; top: 10px; right: 10px; z-index: 1000; max-width: 25%; background: white; padding: 10px; border-radius: 5px; display: none;">
+    <div id="map" style="height: 100vh; width: 100%; position: fixed; top: 0; left: 0;"></div>
+    <div id="pane" class="card col s4" style="position: fixed; top: 50%; left: -300px; transform: translateY(-50%); z-index: 1000; width: 300px; background: white; overflow:auto; transition: left 0.3s ease; height:100%">
     </div>
+    <button id="recenterButton" class="waves-effect btn" style="position: fixed; bottom: 74px; right: 10px; z-index: 1000; background: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; padding: 0;" onclick="recenterMap()">
+        <img src="https://www.freeiconspng.com/uploads/maps-center-direction-icon-24.png" alt="Recenter" style="width: 25px; height: 25px;">
+    </button>
+    
+
+    
 {% endblock %}
 
 {% block code %}
     <script type="text/javascript">
-        var map = L.map('map').setView([10.6464474, -61.4008066], 13); // Sets the initial map position and zoom level
-
-        // Layer group for markers
-        var layerTest = L.layerGroup(); 
-        function addMarkers(){
-            var markers = [[10.649009708224797, -61.399766540398446], [10.64886209134631, -61.401328623642975]]; // Sample marker coords [lat, lng]
-            for(marker of markers){
-                var marker = L.marker([marker[0], marker[1]]).addTo(map); // Adds each marker to the map
-                layerTest.addLayer(marker); // Add each marker to the layerGroup
-            }
-        }
-
-        // Filter categories
-        var overlayMaps = {
-            "Test" : layerTest 
+        var map = L.map('map').setView([10.642529, -61.400225], 13); // Sets the initial map position and zoom level
+        var markerLayer = L.layerGroup();
+        var overlayMaps = {  // Filter categories
+            "Markers" : markerLayer
         };
+
+        var drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+        var drawControl = new L.Control.Draw({
+            draw:{
+                circle: false,
+                polyline: false//,
+                //rectangle: false
+            },
+            edit: {
+                featureGroup: drawnItems,
+                edit: false,
+                remove: false
+            }
+        });
+        console.log(drawControl)
+        var layerControl = L.control.layers(null, overlayMaps, { position: 'bottomright' }).addTo(map);
+        //var marker = L.marker([10.6464474, -61.4008066]).addTo(map);
+        //marker.on('click', onMarkerClick);
+        var mode = 'view';
+        var currentMarker;
+        var drawingLayer = L.geoJSON().addTo(map)
+
+        map.addControl(drawControl);
+        map.on('load', addObjects()); // Call the addMarkers() function when the map loads
+        map.on('click', onMapClick);
+        map.on(L.Draw.Event.CREATED, function(e){
+            var layer = e.layer;
+            currentMarker = layer;
+            var type = e.layerType;
+            console.log(layer.latlng)
+            drawnItems.addLayer(layer);
+
+            if(type === 'marker'){
+                let pane = document.querySelector('#pane');
+                if (pane.innerHTML.trim() === '') {
+                    //Form for adding markers
+                    let html = `
+    <div class="row" id="addMarkerForm">
+        <div class="col s12">
+        <button style="float: right; background: none; border: none; font-size: 1.5em; cursor: pointer;" onclick="cancelAdd()">×</button>
+            <form action="/addMarker" method="POST" enctype="multipart/form-data" style='padding:2em;'>
+                <div class="row">
+                    <div class="input-field col s12">
+                        <label for="markerName" style="position:static;">Name</label>
+                        <input placeholder="eg. FST 114" id="markerName" name="markerName" type="text" class="validate" required>
+                    </div>
+                    <div class="input-field col s12">
+                        <label for="floorNum" style="position:static;">Floor #</label>
+                        <input placeholder="eg. 0" id="floorNum" name="floorNum" type="number" step="1" class="validate" required>
+                    </div>
+                    <div class="input-field col s12">
+                        <label for="buildingName" style="position:static;">Building Name</label>
+                        <select name="buildingChoice" id="buildingChoice" style="display:static;" required>
+                            <option value="" disabled selected>Choose a building</option>
+                    `;
+                    //Populates the select with all the buildings
+                    {% for building in buildings %}
+                        html += `
+                            <option value="{{building.id}}">{{building.name}}</option>
+                        `
+                    {% endfor %}
+
+                    html += `
+                    </select>
+                    </div>
+                    <div class="input-field col s12">
+                        <label for="description" style="position:static;">Description (Optional)</label>
+                        <textarea class="materialize-textarea" placeholder="eg. Located on right of south entrance" name="description" id="description" rows="4" cols="12"></textarea>
+                    </div>
+
+                    <div class="input-field col s12">
+                            <label for="imageUpload" style="position:static">Upload Image (Optional)</label>
+                    </div>
+                    <div class="file-field input-field col s12">
+                        <div class="btn-small blue">
+                            <span><i class="material-icons">file_upload</i></span>
+                            <input type="file" name="imageUpload" id="imageUpload" accept="image/*">
+                        </div>
+                        <div class="file-path-wrapper">
+                            <input class="file-path validate" type="text">
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" name="x" id="x" value="${layer.getLatLng().lat}">
+                    <input type="hidden" name="y" id="y" value="${layer.getLatLng().lng}">
+                    <div class="input-field col s12">
+                      <button class="waves-effect waves-light btn" type="submit">Add Marker</button>
+                      <input class="waves-effect waves-light white btn black-text" type="button" value="Cancel" onclick="cancelAdd()">   
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>`;
+                pane.innerHTML = html;
+                pane.style.left = '10px';
+
+                //Materialize select fields need these 2 lines to of code to actually initialize the options for some reson
+                var elems = document.querySelectorAll('select');
+                var instances = M.FormSelect.init(elems);
+                }
+            }
+
+            if(type === 'polygon' || type === 'circle' || type === 'rectangle'){
+                var geoJSON = layer.toGeoJSON();
+                geoJSONString = JSON.stringify(geoJSON);
+                console.log(geoJSON);
+                let pane = document.querySelector('#pane');
+                let html = `
+                <div class="row" id="addBuildingForm">
+        <div class="col s12">
+        <button style="float: right; background: none; border: none; font-size: 1.5em; cursor: pointer;" onclick="cancelAdd()">×</button>
+            <form action="/addBuilding" method="POST" style='padding:2em;'>
+                <div class="row">
+                    <div class="input-field col s12">
+                        <label for="buildingName" style="position:static;">Building Name</label>
+                        <input placeholder="egs. ENG Block 7, TCB #2" id="buildingName" name="buildingName" type="text" class="validate" required>
+                    </div>
+                    <div class="input-field col s12">
+                        <label for="facultyName" style="position:static;">Faculty</label>
+                        <select name="facultyChoice" id="facultyChoice" style="display:static;" required>
+                            <option value="" disabled selected>Choose a building</option>
+                    `;
+                    //Populates the select with all the faculties
+                    {% for faculty in faculties %}
+                        html += `
+                            <option value="{{faculty.id}}">{{faculty.abbr}} - {{faculty.name}}</option>
+                        `
+                    {% endfor %}
+
+                    html += `
+                    </select>
+                    <input type="hidden" name="geoJSON" id="geoJSON" value='${geoJSONString}'>
+
+                    <div class="input-field col s12">
+                      <button class="waves-effect waves-light btn" type="submit">Add Building</button>
+                      <input class="waves-effect waves-light white btn black-text right" type="button" value="Cancel" onclick="cancelAdd()">   
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>`
+                
+                pane.innerHTML = html;
+                pane.style.left = '10px';
+
+                //Materialize select fields need these 2 lines to of code to actually initialize the options for some reson
+                var elems = document.querySelectorAll('select');
+                var instances = M.FormSelect.init(elems);
+                /*let data = {building: "test", data: geoJSON}
+                    fetch("/addDrawing", {
+                        method: "POST",
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(data)
+                    }).then(res => {
+                        console.log(`Added drawing with coords ${data} to database`);
+                    });*/
+            }
+        });
+
+        // Move zoom controls under the layer control toggle
+        map.zoomControl.setPosition('bottomright');
+        document.querySelector('.leaflet-control-zoom').style.marginBottom = '47px';
+        document.querySelectorAll('.leaflet-control-zoom a').forEach(button => {
+            button.style.width = '45px';
+            button.style.height = '35px';
+        });
 
         // GeoJSON example
         var paneTest = {
@@ -72,81 +232,320 @@
                 }
             ]
         };
+        
+        /*L.geoJSON(paneTest, {
+            onEachFeature: onEachFeature
+        }).addTo(map);*/
+
+        //Just closes the pane and removes the marker that was initially put down when adding a marker
+        function cancelAdd(){
+            map.removeLayer(currentMarker);
+            closeContainer();
+        }
+
+        
+
+        //What happens on the backend is for each marker object, its attributes are appended to a list, and then that list is sent
+        //here, where each element of the list(i.e. attribute of the marker) is added to the marker objected created here. 
+        //I could have just passed the markers from the backend using jinja, I can't remember why I had to resort to this, but it's kinda late to change
+        //it right now. May neaten up if we have time.
+        function addObjects(){
+            {% for marker in markers %}
+                var newMarker = L.marker([{{marker.x}}, {{marker.y}}], {title: "{{marker.name}}"}).addTo(map); // Adds each marker to the map
+                console.log("markerid: " + {{marker.id}})
+                newMarker.id = {{marker.id}}
+                newMarker.name = "{{marker.name}}"
+                newMarker.floor = {{marker.floor}}
+                newMarker.description = "{{marker.description}}"
+                newMarker.building = "{{marker.building.name}}"
+                newMarker.image = "{{marker.image}}"
+                newMarker.on('click', onMarkerClick);
+                markerLayer.addLayer(newMarker).addTo(map); // Add each marker to the layerGroup
+                newMarker.bindTooltip("{{marker.name}}", {permanent: true, offset: [-15, 40], direction: "center", className: 'transparent-tooltip'});
+                var markerColorIcon;
+
+                switch("{{marker.building.faculty.abbr}}") {
+                    case "FST":
+                        markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png"
+                        break;
+                    case "FHE":
+                        markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png"
+                        break;
+                    case "ENG":
+                        markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png"
+                        break;
+                    case "FOL":
+                        markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-black.png"
+                        break;
+                    case "FFA":
+                        markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png"
+                        break;
+                    case "FSS":
+                        markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png"
+                        break;
+                    case "Admin/Guild":
+                        markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-violet.png"
+                        break;
+                    default:
+                        markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png"
+                        break;
+                }
+
+                var newIcon = L.icon({
+                    iconUrl: markerColorIcon,
+                    iconSize: [25, 41], 
+                    iconAnchor: [12, 41],  
+                    popupAnchor: [1, -34],
+                    tooltipAnchor: [16, -28]
+                  });
+                newMarker.setIcon(newIcon);
+            {% endfor %}
+
+        
+            {% for building in buildings %}
+                var name = "{{building.name}}";
+                var newDrawingCoords = JSON.parse({{building.drawingCoords|tojson}})
+                
+                newDrawingCoords.properties["name"] = name;
+                newDrawingCoords.properties["faculty"] = "{{building.faculty.abbr}}"
+                drawingLayer.addData(newDrawingCoords)
+                console.log(newDrawingCoords);
+            {% endfor %}
+
+            drawingLayer.eachLayer(function(layer){
+                layer.bindTooltip(layer.feature.properties.name, {permanent: true, offset: [0, 0], direction: "center", className: 'transparent-tooltip-building'});
+                var facultyColor;
+                var fillFacultyColor;
+                switch(layer.feature.properties.faculty) {
+                    case "FST":
+                        facultyColor='gold'
+                        fillfacultyColor='yellow'
+                        break;
+                    case "FHE":
+                        facultyColor='royalblue'
+                        fillfacultyColor='royalblue'
+                        break;
+                    case "ENG":
+                        facultyColor='slategrey'
+                        fillfacultyColor='slategrey'
+                        break;
+                    case "FOL":
+                        facultyColor='black'
+                        fillfacultyColor='black'
+                        break;
+                    case "FFA":
+                        facultyColor='green'
+                        fillfacultyColor='green'
+                        break;
+                    case "FSS":
+                        facultyColor='red'
+                        fillfacultyColor='red'
+                        break;
+                    case "Admin/Guild":
+                        facultyColor='purple'
+                        fillfacultyColor='purple'
+                        break;
+                    default:
+                        facultyColor='grey'
+                        fillfacultyColor='grey'
+                        break;
+                }
+
+                layer.setStyle({
+                    color: facultyColor,
+                    fillColor: fillFacultyColor,
+                    weight: 1,
+                    fillOpacity: 0.2
+                  });
+            });
+        }
 
         function onEachFeature(feature, layer) {
             if (feature.properties && feature.properties.popupContent) {
                 layer.bindPopup(feature.properties.popupContent);
             }
         }
+        
+        function onMarkerClick(e){
+            console.log(e.target.id);
+            marker = e.target
+            currentMarker = marker;
+            //fetch(`/viewMarker/${e.target.id}`)
+            let pane = document.querySelector('#pane');
+            //Brings up the edit marker form. The form sends a POST request to editMarker, however you can't actually submit this form by default.
+            //By default the form actually just displays the marker info.
+            //There is an edit button at the bottom which, if clicked, replaces the contents of the form with editable fields, and a button which
+            //actually submits the form. Very jank way of doing this.
+            //The delete button is also here, but since a form can't send both a POST and a GET request to 2 differnet routes, the delete button just
+            //calls a JS function thats sends a GET request to the deleteMarker route.
+            let html = `
+    <div class="row">
+        <div class="col s12">
+        
+            <form method="POST" action="/editMarker/${marker.id}" enctype="multipart/form-data">
+            <div>`
+            //Only add the image if one exists for the current marker
+            if(marker.image != ''){
+                html += `
+                <div class="card-image">
+                    <img src="${marker.image}" height="300" style="object-fit:cover; object-position: 20% 10%;">
+                    <button style="float: right; background: none; border: none; font-size: 1.5em; cursor: pointer; z-index:1500;" onclick="closeContainer()">×</button>
+                </div>
+                `
+            } else {
+                html += `<button style="float: right; background: none; border: none; font-size: 1.5em; cursor: pointer; z-index:1500;" onclick="closeContainer()">×</button>`
+            }
+            html += `
+                <div name="markerInfoForm" id="markerInfoForm" class="card-content">
+                    <span class="card-title"><h5>Marker Information</h5></span>
+                    <h6>Name</h6>
+                    <p>${marker.name}</p>
+                    <h6>Building</h6>
+                    <p>${marker.building}</p>
+                    <h6>Floor #</h6>
+                    <p>${marker.floor}</p>
+                    <h6>Description</h6>
+                    <p>${marker.description}</p>
+                </div>
+                <div name="markerInfoFormButtons" id="markerInfoFormButtons" class="card-action" style="position:static;">
+                    <input type="button" onclick="editMarkerView()" class="waves-effect waves-light orange btn" value="Edit">
+                    <button type="button" onclick="deleteMarker(${marker.id})" class="waves-effect waves-light red btn right">Delete</button>
+                </div>
+            </div>
+            </form>
+        </div>
+    </div>
+            `;
+            pane.innerHTML = html;
+            pane.style.left = '10px';
+        }
+        
+        //"Manually" sends a GET request to /deleteMarker
+        function deleteMarker(id){
+            fetch(`/deleteMarker/${id}`).then(res => {
+                console.log(`Deleted marker from database`);
+                window.location.reload()
+            });
+        }
 
-        var layerControl = L.control.layers(null, overlayMaps).addTo(map);
-        L.geoJSON(paneTest, {
-            onEachFeature: onEachFeature
-        }).addTo(map);
+        //If the edit button is clicked, then this function is what actually "makes" all the fields in the form editable and adds the real submit button
+        function editMarkerView(){
+            let infoPane = document.querySelector('#markerInfoForm');
+            if(infoPane != null){
+                html = `
+                    <div class="input-field col s12">
+                        <label for="markerName" style="position:static;">Name</label>
+                        <input value="${currentMarker.name}" id="markerName" name="markerName" type="text" class="validate" required>
+                    </div>
+                    <div class="input-field col s12">
+                        <label for="floorNum" style="position:static;">Floor #</label>
+                        <input value="${currentMarker.floor}" id="floorNum" name="floorNum" type="number" step="1" class="validate" required>
+                    </div>
+                    <div class="input-field col s12">
+                        <label for="buildingName" style="position:static;">Building Name</label>
+                        <select name="buildingChoice" id="buildingChoice" style="display:static;">
+                            <option value="" selected disabled>${currentMarker.building}</option>
+                    `;
+                    {% for building in buildings %}
+                        if("{{building.name}}" != currentMarker.building){
+                            html += `
+                               <option value="{{building.id}}">{{building.name}}</option>
+                            `
+                        }
+                    {% endfor %}
+                    html += `
+                        </select>
+                    </div>
+                    <div class="input-field col s12">
+                        <label for="description" style="position:static;">Description (Optional)</label>
+                        <textarea class="materialize-textarea" name="description" id="description" rows="4" cols="12">${currentMarker.description}</textarea>
+                    </div>
+                    <div class="input-field col s12">
+                        <label for="coords" style="position:static;">Current coordinates</label>
+                        <div id="coords" name="coords">
+                            <span style="white-space:nowrap">
+                                <label for="x">X:  </label>
+                                <input type="text" name="x" id="x" value="${currentMarker.getLatLng().lat}">
+                            </span>
+                            <span style="white-space:nowrap">
+                                <label for="y">Y:  </label>
+                                <input type="text" name="y" id="y" value="${currentMarker.getLatLng().lng}">
+                            </span>
+                            <button type="button" class="waves-effect waves-light blue btn" onclick="coordUpdateMode()">Move</button>
+                            <sub style="color: grey;">(Click new location on map)</sub>
+                        </div>
+                    </div>
+                        
+                    <div class="input-field col s12">
+                        <label for="imageUpload" style="position:static">Change Image</label>
+                    </div>
+                    <div class="file-field col s12">
+                        <div class="btn-small blue">
+                            <span><i class="material-icons">file_upload</i></span>
+                            <input type="file" name="imageUpload" id="imageUpload" accept="image/*">
+                        </div>
+                        <div class="file-path-wrapper">
+                            <input class="file-path validate" type="text" value="${currentMarker.image}">
+                        </div>
+                    </div> 
+                `;
+                infoPane.innerHTML = html;
+                //Have to initialize select options once again
+                var elems = document.querySelectorAll('select');
+                var instances = M.FormSelect.init(elems);
 
-        map.on('load', addMarkers()); // Call the addMarkers() function when the map loads
+                //This code replaces the button with the real button to actually submit the form
+                var buttons = document.querySelector('#markerInfoFormButtons');
+                if(buttons != null){
+                    console.log('y');
+                    buttons.innerHTML = `
+                      <button class="waves-effect waves-light orange btn" type="submit">Update Marker</button>
+                      <input class="waves-effect waves-light white btn black-text" type="button" value="Cancel" onclick="closeContainer()">    
+                    `;
+                } else {
+                    console.log("n")
+                }
+            }
+        }
 
+        //Self explanatory
+        function closeContainer(){
+            let pane = document.querySelector('#pane');
+            pane.innerHTML = '';
+            pane.style.left = '-300px';
+        }
+
+        //If you are editing a form, and want to change the coordinates of the marker, then this function gets called and sets the mode to update, which
+        //well let the onMapClick function return the coords of where you click instead of doing anything else.
+        function coordUpdateMode(){
+            mode = 'update';
+        }
+
+        //This function can use some cleaning up and separating. As it is right now, it's actually been replaced by another one. To be removed and properly
+        //segregated.
+        function onMapClick(e){
+            if(mode === 'update'){
+                let x = document.querySelector('#x')
+                let y = document.querySelector('#y')
+                if(x != null && y != null){
+                    x.value = e.latlng.lat;
+                    y.value = e.latlng.lng;
+                    currentMarker.setLatLng(e.latlng);
+                }
+            }  
+        }
+
+        function recenterMap() {
+            map.setView([10.646447, -61.400807], 13);
+        }
+        
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             minZoom: 16,
             maxZoom: 50,
             attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         }).addTo(map);
 
-        var marker = L.marker([10.6464474, -61.4008066]).addTo(map);
-        marker.on('click', onMarkerClick);
-
-        function onMarkerClick(e){
-            let pane = document.querySelector('#pane');
-            if(pane.innerHTML.trim() == ''){
-                let html = `
-                    <div class="container col s1">
-                        <button style="float: right; background: none; border: none; font-size: 1.5em; cursor: pointer;" onclick="closeContainer()">×</button>
-                        <p style="margin-left: 1em;">Coordinates are ${e.latlng}</p>
-                        <img src='https://media1.tenor.com/m/t6VAu8neEjkAAAAd/cat-vro.gif' width='150' height='150' style="margin-left:1em;">
-                    </div>`;
-                pane.innerHTML = html;
-                pane.style.display = 'block';
-            } else {
-                closeContainer();
-            }
-        }
-
-        function closeContainer(){
-            let pane = document.querySelector('#pane');
-            pane.innerHTML = '';
-            pane.style.display = 'none';
-        }
-
-        function onMapClick(e){
-            if(mode === 'edit'){
-                marker = L.marker(e.latlng).addTo(map).on('click', onMarkerClick);
-                alert("Added marker at " + e.latlng.toString());
-            } else {
-                let data = {x: e.latlng.lat, y: e.latlng.lng};
-                fetch("/addMarker", {
-                    method: "POST",
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(data)
-                }).then(res => {
-                    console.log(`Added ${e.latlng} to database`);
-                });
-            }
-        }
-
-        var mode = 'view';
-        function changeMode(){
-            if(mode === 'view'){
-                mode = 'edit';
-                alert('Mode changed to EDIT');
-            } else {
-                mode = 'view';
-                alert('Mode changed to VIEW');
-            }
-        }
-        map.on('click', onMapClick);
-
-        // Move zoom controls under the layer control toggle
-        map.zoomControl.setPosition('topright');
-        document.querySelector('.leaflet-control-zoom').style.marginTop = '50px';
+        // Prevent scrolling
+        document.body.style.overflow = 'hidden';
     </script>
 {% endblock %}
