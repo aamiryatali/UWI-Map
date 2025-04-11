@@ -2,13 +2,16 @@ from App.database import db
 from .marker import Marker
 
 class Building(db.Model):
-    buildingID = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
-    drawingCoords = db.Column(db.String(1000))
+    drawingCoords = db.Column(db.JSON)
     markers = db.relationship('Marker', backref='building')
+    facultyID = db.Column(db.Integer, db.ForeignKey('faculty.id'))
 
-    def __init__(self, name):
+    def __init__(self, name, facultyID, drawingCoords):
         self.name = name
+        self.facultyID = facultyID
+        self.drawingCoords = drawingCoords
 
     def getMarkers(self):
         return self.markers
@@ -19,7 +22,7 @@ class Building(db.Model):
         db.session.commit()
 
     def addMarker(self, x, y, name, floor, description=None):
-        marker = Marker(x, y, name, floor, self.buildingID, description)
+        marker = Marker(x, y, name, floor, self.id, description)
         if not marker:
             db.session.rollback()
             return False

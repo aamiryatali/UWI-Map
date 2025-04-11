@@ -8,7 +8,7 @@ class Marker(db.Model):
     image = db.Column(db.String(200), nullable=True, default='')
     floor = db.Column(db.Integer, nullable=False)
     description = db.Column(db.String(100), nullable=True)
-    buildingID = db.Column(db.Integer, db.ForeignKey('building.buildingID'))
+    buildingID = db.Column(db.Integer, db.ForeignKey('building.id'))
 
     def __init__(self, x, y, name, floor, buildingID, description=None):
         self.x = x
