@@ -7,7 +7,6 @@ from App.models import User, Marker, Building
 from App.main import create_app
 from App.controllers import ( create_user, get_all_users_json, get_all_users, initialize, create_building)
 
-
 # This commands file allow you to create convenient CLI commands for testing controllers
 
 app = create_app()
@@ -53,7 +52,7 @@ app.cli.add_command(user_cli) # add the group to the cli
 def list_user_command():
     list = Marker.query.all()
     for m in list:
-        print(f'{m.x} | {m.y}')
+        print(f'{m.x} | {m.y} | {m.image}')
 
 app.cli.add_command(user_cli) # add the group to the cli
 
