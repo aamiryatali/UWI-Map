@@ -8,9 +8,6 @@
     <div id="map" style="height: 100vh; width: 100%; position: fixed; top: 0; left: 0;"></div>
     <div id="pane" class="card col s4" style="position: fixed; top: 50%; left: -300px; transform: translateY(-50%); z-index: 1000; width: 300px; background: white; overflow:auto; transition: left 0.3s ease; height:100%">
     </div>
-    <button id="recenterButton" class="waves-effect btn" style="position: fixed; bottom: 74px; right: 10px; z-index: 1000; background: white; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; padding: 0;" onclick="recenterMap()">
-        <img src="https://www.freeiconspng.com/uploads/maps-center-direction-icon-24.png" alt="Recenter" style="width: 25px; height: 25px;">
-    </button>
     
 
     
@@ -26,10 +23,12 @@
 
         var drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
+
         var drawControl = new L.Control.Draw({
-            draw:{
+            position: 'bottomright',
+            draw: {
                 circle: false,
-                polyline: false//,
+                polyline: false
                 //rectangle: false
             },
             edit: {
@@ -38,25 +37,37 @@
                 remove: false
             }
         });
-        console.log(drawControl)
+
+        L.control.locate({
+            position: 'bottomright',
+            strings: {
+                title: "Pan to current location"
+            },
+            keepCurrentZoomLevel: true
+        }).addTo(map);
+
         var layerControl = L.control.layers(null, overlayMaps, { position: 'bottomright' }).addTo(map);
         //var marker = L.marker([10.6464474, -61.4008066]).addTo(map);
         //marker.on('click', onMarkerClick);
         var mode = 'view';
         var currentMarker;
+        var currentBuilding;
         var drawingLayer = L.geoJSON().addTo(map)
 
+        map.doubleClickZoom.disable();
         map.addControl(drawControl);
         map.on('load', addObjects()); // Call the addMarkers() function when the map loads
         map.on('click', onMapClick);
         map.on(L.Draw.Event.CREATED, function(e){
             var layer = e.layer;
-            currentMarker = layer;
             var type = e.layerType;
             console.log(layer.latlng)
             drawnItems.addLayer(layer);
+            closeContainer();
 
+            //If the drawn item was a marker
             if(type === 'marker'){
+                currentMarker = layer;
                 let pane = document.querySelector('#pane');
                 if (pane.innerHTML.trim() === '') {
                     //Form for adding markers
@@ -72,7 +83,7 @@
                     </div>
                     <div class="input-field col s12">
                         <label for="floorNum" style="position:static;">Floor #</label>
-                        <input placeholder="eg. 0" id="floorNum" name="floorNum" type="number" step="1" class="validate" required>
+                        <input placeholder="eg. 0" id="floorNum" name="floorNum" type="number" min="0" step="1" class="validate" required>
                     </div>
                     <div class="input-field col s12">
                         <label for="buildingName" style="position:static;">Building Name</label>
@@ -126,10 +137,19 @@
                 }
             }
 
+            //If it was a building i.e. a shape:
             if(type === 'polygon' || type === 'circle' || type === 'rectangle'){
                 var geoJSON = layer.toGeoJSON();
-                geoJSONString = JSON.stringify(geoJSON);
-                console.log(geoJSON);
+                geoJSONString = JSON.stringify(geoJSON); //Prepare the geoJSON representation of the shape to be sent to the backend
+                if(mode === "redraw"){ //Check if this is a new building, or re-drawing a previous one.
+                    if(currentBuilding != undefined){
+                        let field = document.querySelector('#newDrawingCoords');
+                        console.log(field);
+                        newDrawingCoords.value = geoJSONString;
+                    }
+                    return;
+                }
+
                 let pane = document.querySelector('#pane');
                 let html = `
                 <div class="row" id="addBuildingForm">
@@ -144,7 +164,7 @@
                     <div class="input-field col s12">
                         <label for="facultyName" style="position:static;">Faculty</label>
                         <select name="facultyChoice" id="facultyChoice" style="display:static;" required>
-                            <option value="" disabled selected>Choose a building</option>
+                            <option value="" disabled selected>Choose a faculty</option>
                     `;
                     //Populates the select with all the faculties
                     {% for faculty in faculties %}
@@ -157,102 +177,38 @@
                     </select>
                     <input type="hidden" name="geoJSON" id="geoJSON" value='${geoJSONString}'>
 
-                    <div class="input-field col s12">
+                    
                       <button class="waves-effect waves-light btn" type="submit">Add Building</button>
                       <input class="waves-effect waves-light white btn black-text right" type="button" value="Cancel" onclick="cancelAdd()">   
-                    </div>
                 </div>
             </form>
         </div>
     </div>`
-                
                 pane.innerHTML = html;
                 pane.style.left = '10px';
 
                 //Materialize select fields need these 2 lines to of code to actually initialize the options for some reson
                 var elems = document.querySelectorAll('select');
                 var instances = M.FormSelect.init(elems);
-                /*let data = {building: "test", data: geoJSON}
-                    fetch("/addDrawing", {
-                        method: "POST",
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify(data)
-                    }).then(res => {
-                        console.log(`Added drawing with coords ${data} to database`);
-                    });*/
             }
         });
 
-        // Move zoom controls under the layer control toggle
+        // Move zoom controls under the layer control toggle, with some CSS styling done in <style>
         map.zoomControl.setPosition('bottomright');
-        document.querySelector('.leaflet-control-zoom').style.marginBottom = '47px';
-        document.querySelectorAll('.leaflet-control-zoom a').forEach(button => {
-            button.style.width = '45px';
-            button.style.height = '35px';
-        });
 
-        // GeoJSON example
-        var paneTest = {
-            "type": "FeatureCollection",
-            "features": [
-                {
-                "type": "Feature",
-                "properties": {
-                    "name": "Test Pane",
-                    "amenity": "Polygon",
-                    "popupContent": "Test popup for polygon"
-                },
-                "geometry": {
-                    "coordinates": [
-                    [
-                        [
-                        -61.39998930812794,
-                        10.638831871955404
-                        ],
-                        [
-                        -61.39953237900065,
-                        10.638589128766455
-                        ],
-                        [
-                        -61.39937801105165,
-                        10.638661951743003
-                        ],
-                        [
-                        -61.399538553718685,
-                        10.63901999779469
-                        ],
-                        [
-                        -61.39998930812794,
-                        10.638831871955404
-                        ]
-                    ]
-                    ],
-                    "type": "Polygon"
-                }
-                }
-            ]
-        };
-        
-        /*L.geoJSON(paneTest, {
-            onEachFeature: onEachFeature
-        }).addTo(map);*/
-
-        //Just closes the pane and removes the marker that was initially put down when adding a marker
+        //Just closes the pane and removes the marker that was initially put down when adding a marker. May be modified to also remove cancelled buildings.
         function cancelAdd(){
-            map.removeLayer(currentMarker);
+            if(currentMarker != undefined){
+                map.removeLayer(currentMarker);
+            }
             closeContainer();
         }
 
-        
-
-        //What happens on the backend is for each marker object, its attributes are appended to a list, and then that list is sent
-        //here, where each element of the list(i.e. attribute of the marker) is added to the marker objected created here. 
-        //I could have just passed the markers from the backend using jinja, I can't remember why I had to resort to this, but it's kinda late to change
-        //it right now. May neaten up if we have time.
+        //Alot goes on here. 
         function addObjects(){
             {% for marker in markers %}
                 var newMarker = L.marker([{{marker.x}}, {{marker.y}}], {title: "{{marker.name}}"}).addTo(map); // Adds each marker to the map
-                console.log("markerid: " + {{marker.id}})
+                //The marker object attributes from the backend is basically just recreated here.
                 newMarker.id = {{marker.id}}
                 newMarker.name = "{{marker.name}}"
                 newMarker.floor = {{marker.floor}}
@@ -264,6 +220,7 @@
                 newMarker.bindTooltip("{{marker.name}}", {permanent: true, offset: [-15, 40], direction: "center", className: 'transparent-tooltip'});
                 var markerColorIcon;
 
+                //Dynamically change the color of the marker icon depending on the faculty.
                 switch("{{marker.building.faculty.abbr}}") {
                     case "FST":
                         markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png"
@@ -301,17 +258,19 @@
                 newMarker.setIcon(newIcon);
             {% endfor %}
 
-        
+            //Recreating pseudo-building objects from the backend.
             {% for building in buildings %}
                 var name = "{{building.name}}";
                 var newDrawingCoords = JSON.parse({{building.drawingCoords|tojson}})
-                
+
+                newDrawingCoords.properties["id"] = {{building.id}}
                 newDrawingCoords.properties["name"] = name;
                 newDrawingCoords.properties["faculty"] = "{{building.faculty.abbr}}"
+                newDrawingCoords.properties["facultylong"] = "{{building.faculty.name}}"
                 drawingLayer.addData(newDrawingCoords)
-                console.log(newDrawingCoords);
             {% endfor %}
-
+            
+            //Dynamically color each building depending on the faculty
             drawingLayer.eachLayer(function(layer){
                 layer.bindTooltip(layer.feature.properties.name, {permanent: true, offset: [0, 0], direction: "center", className: 'transparent-tooltip-building'});
                 var facultyColor;
@@ -357,7 +316,96 @@
                     weight: 1,
                     fillOpacity: 0.2
                   });
+                
+                layer.on('dblclick', onBuildingClick); //Double clicking a building will bring up the info pane for it.
             });
+        }
+
+        //Brings up the building info pane on double click
+        function onBuildingClick(e){
+            building = e.target.feature.properties
+            currentBuilding = e.target.feature.properties
+            pane = document.querySelector('#pane');
+            let html = `
+    <div class="row">
+        <div class="col s12">
+            <button style="float: right; background: none; border: none; font-size: 1.5em; cursor: pointer;" onclick="closeContainer()">×</button>
+            <form method="POST" action="/editBuilding/${building.id}">
+            <div>
+                <div name="buildingInfoForm" id="buildingInfoForm" class="card-content">
+                    <span class="card-title"><h5>Building Information</h5></span>
+                    <h6>Name</h6>
+                    <p>${building.name}</p>
+                    <h6>Faculty</h6>
+                    <p>${building.facultylong}</p>
+                </div>
+                <div name="buildingInfoFormButtons" id="buildingInfoFormButtons" class="card-action" style="position:static;">
+                    <input type="button" onclick="editBuildingView()" class="waves-effect waves-light orange btn" value="Edit">
+                    <button type="button" onclick="deleteBuilding(${building.id})" class="waves-effect waves-light red btn">Delete</button>
+                </div>
+            </div>
+            </form>
+        </div>
+    </div>
+            `;
+            pane.innerHTML = html;
+            pane.style.left = '10px';
+        }
+
+        //Brings up the edit form for buildings
+        function editBuildingView(){
+            let infoPane = document.querySelector('#buildingInfoForm');
+            if(infoPane != undefined){
+                html = `
+                    <div class="input-field col s12">
+                        <label for="markerName" style="position:static;">Name</label>
+                        <input value="${currentBuilding.name}" id="buildingName" name="buildingName" type="text" class="validate" required>
+                    </div>
+                    <div class="input-field col s12">
+                        <label for="facultyChoice" style="position:static;">Faculty</label>
+                        <select name="facultyChoice" id="facultyChoice" style="display:static;">
+                            
+                    `;
+                    {% for faculty in faculties %}
+                        if("{{faculty.abbr}}" != currentBuilding.faculty){
+                            html += `
+                               <option value="{{faculty.id}}">{{faculty.abbr}} - {{faculty.name}}</option>
+                            `
+                        } else {
+                            html += `
+                            <option value="{{faculty.id}}" selected disabled>{{faculty.abbr}} - {{faculty.name}}</option>
+                            `
+                        }
+                    {% endfor %}
+                    html += `
+                        </select>
+                    </div>
+                    <button class="waves-effect waves-light blue btn" type="button" onclick="reDraw()">Re-draw</button>
+                    <div id="reDrawTooltip" name="reDrawTooltip"></div>
+                    <input type="hidden" id="newDrawingCoords" name="newDrawingCoords" value="">
+                `;
+                infoPane.innerHTML = html;
+                //Have to initialize select options once again
+                var elems = document.querySelectorAll('select');
+                var instances = M.FormSelect.init(elems);
+
+                //This code replaces the button with the real button to actually submit the form
+                var buttons = document.querySelector('#buildingInfoFormButtons');
+                if(buttons != undefined){
+                    buttons.innerHTML = `
+                      <button class="waves-effect waves-light orange btn" type="submit">Update Building</button>
+                      <input class="waves-effect waves-light white btn black-text" type="button" value="Cancel" onclick="closeContainer()">    
+                    `;
+                }
+            }
+        }
+
+        function reDraw(){
+            //Whenever a new drawing is made, "mode" is checked. If it is "redraw", then creating a drawing updates the currently 
+            //selected building's drawing coordinates instead of bringing up the Add New Building form.
+            mode = "redraw";
+            let tip = document.querySelector('#reDrawTooltip');
+            tip.innerHTML = '<h6>Draw a new shape with the toolbar!</h6>'
         }
 
         function onEachFeature(feature, layer) {
@@ -370,7 +418,6 @@
             console.log(e.target.id);
             marker = e.target
             currentMarker = marker;
-            //fetch(`/viewMarker/${e.target.id}`)
             let pane = document.querySelector('#pane');
             //Brings up the edit marker form. The form sends a POST request to editMarker, however you can't actually submit this form by default.
             //By default the form actually just displays the marker info.
@@ -388,7 +435,7 @@
             if(marker.image != ''){
                 html += `
                 <div class="card-image">
-                    <img src="${marker.image}" height="300" style="object-fit:cover; object-position: 20% 10%;">
+                    <img src="${marker.image}" height="200" style="object-fit:cover; object-position: 20% 10%;">
                     <button style="float: right; background: none; border: none; font-size: 1.5em; cursor: pointer; z-index:1500;" onclick="closeContainer()">×</button>
                 </div>
                 `
@@ -428,10 +475,17 @@
             });
         }
 
+        function deleteBuilding(id){
+            fetch(`/deleteBuilding/${id}`).then(res => {
+                console.log(`Deleted building from database`);
+                window.location.reload()
+            });
+        }
+
         //If the edit button is clicked, then this function is what actually "makes" all the fields in the form editable and adds the real submit button
         function editMarkerView(){
             let infoPane = document.querySelector('#markerInfoForm');
-            if(infoPane != null){
+            if(infoPane != undefined){
                 html = `
                     <div class="input-field col s12">
                         <label for="markerName" style="position:static;">Name</label>
@@ -439,7 +493,7 @@
                     </div>
                     <div class="input-field col s12">
                         <label for="floorNum" style="position:static;">Floor #</label>
-                        <input value="${currentMarker.floor}" id="floorNum" name="floorNum" type="number" step="1" class="validate" required>
+                        <input value="${currentMarker.floor}" id="floorNum" name="floorNum" type="number" min="0" step="1" class="validate" required>
                     </div>
                     <div class="input-field col s12">
                         <label for="buildingName" style="position:static;">Building Name</label>
@@ -471,8 +525,7 @@
                                 <label for="y">Y:  </label>
                                 <input type="text" name="y" id="y" value="${currentMarker.getLatLng().lng}">
                             </span>
-                            <button type="button" class="waves-effect waves-light blue btn" onclick="coordUpdateMode()">Move</button>
-                            <sub style="color: grey;">(Click new location on map)</sub>
+                            <sub style="color: grey;">(Drag marker to new location)</sub>
                         </div>
                     </div>
                         
@@ -490,17 +543,25 @@
                     </div> 
                 `;
                 infoPane.innerHTML = html;
+                currentMarker.dragging.enable();
+                currentMarker.on('dragend', function(){
+                    console.log(currentMarker);
+                    x = document.querySelector('#x');
+                    y = document.querySelector('#y');
+                    x.value = currentMarker.getLatLng().lat;
+                    y.value = currentMarker.getLatLng().lng;
+                })
                 //Have to initialize select options once again
                 var elems = document.querySelectorAll('select');
                 var instances = M.FormSelect.init(elems);
 
                 //This code replaces the button with the real button to actually submit the form
                 var buttons = document.querySelector('#markerInfoFormButtons');
-                if(buttons != null){
+                if(buttons != undefined){
                     console.log('y');
                     buttons.innerHTML = `
                       <button class="waves-effect waves-light orange btn" type="submit">Update Marker</button>
-                      <input class="waves-effect waves-light white btn black-text" type="button" value="Cancel" onclick="closeContainer()">    
+                      <input class="waves-effect waves-light white btn black-text" type="button" value="Cancel" onclick="closeContainer(${currentMarker.getLatLng().lat}, ${currentMarker.getLatLng().lng})">    
                     `;
                 } else {
                     console.log("n")
@@ -508,33 +569,26 @@
             }
         }
 
-        //Self explanatory
-        function closeContainer(){
+        //This function sort of servers a double purpose right now. It closes the info pane, but in the case of cancelling a marker addition/edit, it also
+        //removes that marker from the map. Should probably separate.
+        function closeContainer(oldLat=null, oldLng=null){
             let pane = document.querySelector('#pane');
             pane.innerHTML = '';
             pane.style.left = '-300px';
-        }
-
-        //If you are editing a form, and want to change the coordinates of the marker, then this function gets called and sets the mode to update, which
-        //well let the onMapClick function return the coords of where you click instead of doing anything else.
-        function coordUpdateMode(){
-            mode = 'update';
-        }
-
-        //This function can use some cleaning up and separating. As it is right now, it's actually been replaced by another one. To be removed and properly
-        //segregated.
-        function onMapClick(e){
-            if(mode === 'update'){
-                let x = document.querySelector('#x')
-                let y = document.querySelector('#y')
-                if(x != null && y != null){
-                    x.value = e.latlng.lat;
-                    y.value = e.latlng.lng;
-                    currentMarker.setLatLng(e.latlng);
+            if(currentMarker != undefined){ //Disables dragging on the current marker if it was enabled before.
+                currentMarker.dragging.disable();
+                if(oldLat != null && oldLng != null){
+                    currentMarker.setLatLng([oldLat, oldLng]);
                 }
-            }  
+            }
         }
 
+        //All functions moved to separate functions. This function remains empty for now.
+        function onMapClick(e){
+            //I used to be very long
+        }
+
+        //This function isn't called in the current state of the website, but may be used/expanded later.
         function recenterMap() {
             map.setView([10.646447, -61.400807], 13);
         }

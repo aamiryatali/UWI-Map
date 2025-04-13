@@ -1,13 +1,14 @@
-from flask import Blueprint, redirect, render_template, request, send_from_directory, jsonify, current_app
+import urllib.request
+from flask import Blueprint, redirect, render_template, request, send_from_directory, jsonify, current_app, flash
 from flask_jwt_extended import jwt_required, current_user as jwt_current_user
-from App.controllers import create_user, initialize, create_building
+from App.controllers import create_user, initialize, create_building, get_marker
 from App.models import db, Marker, Building, Faculty
 from werkzeug.utils import secure_filename
 import os
 import json
 
 index_views = Blueprint('index_views', __name__, template_folder='../templates')
-           
+
 #This function just checks that the file extension is in the list of allowed file extensions
 def allowed_file(filename):
     return '.' in filename and \
@@ -26,16 +27,8 @@ def upload_file(imageFile):
 @index_views.route('/', methods=['GET'])
 def index_page():
     markers = Marker.query.all()
-    markerCoords = []
-    for marker in markers:
-        #This code is pure heresy.
-        markerCoords.append([marker.x, marker.y, marker.id, marker.name, marker.floor, marker.description, marker.building.name, marker.image])
-
     buildings = Building.query.all()
     faculties = Faculty.query.all()
-    buildingData = []
-    for building in buildings:
-        buildingData.append([building.name, building.drawingCoords])
     return render_template('index.html', markers=markers, buildings=buildings, faculties=faculties)
 
 @index_views.route('/init', methods=['GET'])
@@ -50,6 +43,10 @@ def health_check():
 @index_views.route('/addMarker', methods=['POST'])
 def add_marker():
     data = request.form
+    if get_marker(data['markerName']):
+        flash('Marker name already exists!')
+        return redirect(request.referrer)
+    
     imageFile = request.files['imageUpload']
         
     building = Building.query.get(data['buildingChoice'])
@@ -59,11 +56,11 @@ def add_marker():
             if imageFile:
                 secureFilename = upload_file(imageFile)
                 marker.addImage("static/images/" + secureFilename)
-            print("Successfully added marker to building")
+            flash(f'Successfully added {data["markerName"]} to {building.name}')
         else:
-            print("Could not add marker to building")
+            flash("Could not add marker to building")
     else:
-        print("Building does not exist")
+        flash("Building does not exist")
     return redirect(request.referrer)
 
 @index_views.route('/editMarker/<id>', methods=['POST'])
@@ -72,7 +69,7 @@ def edit_marker(id):
     imageFile = request.files['imageUpload']
     
     if not marker:
-        print("could not find marker")
+        flash("Could not find marker")
         return redirect(request.referrer)
     data = request.form
     #This could probably be moved to a model function
@@ -81,8 +78,9 @@ def edit_marker(id):
     marker.description = data['description']
     marker.x = data['x']
     marker.y = data['y']
-    secureFilename = upload_file(imageFile)
-    marker.image = ("static/images/" + secureFilename)
+    if imageFile:
+        secureFilename = upload_file(imageFile)
+        marker.image = ("static/images/" + secureFilename)
     
     db.session.add(marker)
     db.session.commit()
@@ -93,7 +91,7 @@ def delete_marker(id):
     #This could also probably be moved to a model function
     marker = Marker.query.get(id)
     if not marker:
-        print("could not find marker")
+        flash("Could not find marker")
         return redirect(request.referrer)
     db.session.delete(marker)
     db.session.commit()
@@ -107,17 +105,36 @@ def addBuilding():
     print(json.dumps(data['geoJSON']))
     building = create_building(data['buildingName'], data['facultyChoice'], data['geoJSON'])
     if not building:
-        print("Could not create building")
+        flash("Could not create building")
         return redirect(request.referrer)
-    print("Successfully added building")
+    flash(f'Successfully added building: {data["buildingName"]}')
     return redirect(request.referrer)
 
-@index_views.route('/addDrawing', methods=['POST'])
-def addDrawing():
+@index_views.route('/editBuilding/<id>', methods=['POST'])
+def editBuilding(id):
+    building = Building.query.get(id)
+    if not building:
+        flash('Building not found')
+        return redirect(request.referrer)
     data = request.form
-    print(data['building'])
-    building = Building.query.filter_by(name=data['building']).first()
-    stringData = json.dumps(data['data'])
-    building.addDrawing(stringData)
+    building.name = data['buildingName']
+    building.facultyID = data['facultyChoice']
+    if data['newDrawingCoords'] != "":
+        building.drawingCoords = data['newDrawingCoords']
+    db.session.add(building)
+    db.session.commit()
     return redirect(request.referrer)
+    
+@index_views.route('/deleteBuilding/<id>')
+def deleteBuilding(id):
+    #This could also probably be moved to a model function
+    building = Building.query.get(id)
+    if not building:
+        flash("Could not find building")
+        return redirect(request.referrer)
+    db.session.delete(building)
+    db.session.commit()
+    return redirect(request.referrer)
+    
+
 
