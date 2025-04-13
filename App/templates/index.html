@@ -14,6 +14,11 @@
 {% endblock %}
 
 {% block code %}
+    <style>
+        .btn-floating.transparent {
+            box-shadow: none;
+        }
+    </style>
     <script type="text/javascript">
         var map = L.map('map').setView([10.642529, -61.400225], 13); // Sets the initial map position and zoom level
         var markerLayer = L.layerGroup();
@@ -428,23 +433,29 @@
             let html = `
     <div class="row">
         <div class="col s12">
-        
+        <div class ="col s12" style="background-color:skyblue;">
+	        <p>Marker Information</p>
+        </div>
             <form method="POST" action="/editMarker/${marker.id}" enctype="multipart/form-data">
             <div>`
             //Only add the image if one exists for the current marker
             if(marker.image != ''){
                 html += `
                 <div class="card-image">
-                    <img src="${marker.image}" height="200" style="object-fit:cover; object-position: 20% 10%;">
-                    <button style="float: right; background: none; border: none; font-size: 1.5em; cursor: pointer; z-index:1500;" onclick="closeContainer()">×</button>
+                    <button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
+                        <i class="material-icons">exit_to_app</i>
+                    </button>
+                    <img class="materialboxed" src="${marker.image}" height="200" style="object-fit:cover; object-position: 20% 10%;">
                 </div>
                 `
             } else {
-                html += `<button style="float: right; background: none; border: none; font-size: 1.5em; cursor: pointer; z-index:1500;" onclick="closeContainer()">×</button>`
+                html += `<button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
+                            <i class="material-icons">exit_to_app</i>
+                         </button>`
             }
             html += `
                 <div name="markerInfoForm" id="markerInfoForm" class="card-content">
-                    <span class="card-title"><h5>Marker Information</h5></span>
+                    <span class="card-title"></span>
                     <h6>Name</h6>
                     <p>${marker.name}</p>
                     <h6>Building</h6>
@@ -465,6 +476,28 @@
             `;
             pane.innerHTML = html;
             pane.style.left = '10px';
+
+            // Initialize Materialboxed for the image
+            var elems = document.querySelectorAll('.materialboxed');
+            var instances = M.Materialbox.init(elems, {
+                onOpenStart: function(el) {
+                    var closeButton = el.closest('.card-image').querySelector('.btn-floating');
+                    if (closeButton) {
+                        closeButton.style.display = 'none';
+                    }
+                },
+                onCloseEnd: function(el) {
+                    var closeButton = el.closest('.card-image').querySelector('.btn-floating');
+                    if (closeButton) {
+                        closeButton.style.display = 'block';
+                    }
+                    // Ensure the pane remains scrollable
+                    let pane = document.querySelector('#pane');
+                    if (pane) {
+                        pane.style.overflowY = 'auto';
+                    }
+                }
+            });
         }
         
         //"Manually" sends a GET request to /deleteMarker
