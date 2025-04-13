@@ -22,10 +22,21 @@ class Building(db.Model):
         db.session.commit()
 
     def addMarker(self, x, y, name, floor, description=None):
+        marker = Marker.query.filter_by(name=name).first()
+        if marker:
+            if marker not in self.markers:
+                self.markers.append(marker)
+                db.session.add(self)
+                db.session.commit()
+                return marker
+            else:
+                return False
+  
         marker = Marker(x, y, name, floor, self.id, description)
         if not marker:
             db.session.rollback()
             return False
+
         self.markers.append(marker)
         db.session.add(marker)
         db.session.commit()

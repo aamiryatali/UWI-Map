@@ -47,6 +47,7 @@ def add_marker():
         flash('Marker name already exists!')
         return redirect(request.referrer)
     
+    #Get the image file
     imageFile = request.files['imageUpload']
         
     building = Building.query.get(data['buildingChoice'])
@@ -76,6 +77,7 @@ def edit_marker(id):
     marker.name = data['markerName']
     marker.floor = data['floorNum']
     marker.description = data['description']
+    marker.buildingID = data['buildingChoice']
     marker.x = data['x']
     marker.y = data['y']
     if imageFile:
@@ -129,9 +131,17 @@ def editBuilding(id):
 def deleteBuilding(id):
     #This could also probably be moved to a model function
     building = Building.query.get(id)
+    default = Building.query.get(1)
     if not building:
         flash("Could not find building")
         return redirect(request.referrer)
+    for marker in building.markers:
+        default.addMarker(marker.x, marker.y, marker.name, marker.floor, marker.description)
+        print("HIIHIHIHIHIHIHIHIHIHI")
+        print(f'${marker.name} + ${marker.buildingID}')
+        marker.buildingID = 1
+        print(f'${marker.name} + ${marker.buildingID}')
+        db.session.add(marker)
     db.session.delete(building)
     db.session.commit()
     return redirect(request.referrer)

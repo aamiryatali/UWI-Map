@@ -34,7 +34,6 @@
             draw: {
                 circle: false,
                 polyline: false
-                //rectangle: false
             },
             edit: {
                 featureGroup: drawnItems,
@@ -66,12 +65,12 @@
         map.on(L.Draw.Event.CREATED, function(e){
             var layer = e.layer;
             var type = e.layerType;
-            console.log(layer.latlng)
+            console.log(layer)
             drawnItems.addLayer(layer);
-            closeContainer();
 
             //If the drawn item was a marker
             if(type === 'marker'){
+                closeContainer();
                 currentMarker = layer;
                 let pane = document.querySelector('#pane');
                 if (pane.innerHTML.trim() === '') {
@@ -91,15 +90,17 @@
                         <input placeholder="eg. 0" id="floorNum" name="floorNum" type="number" min="0" step="1" class="validate" required>
                     </div>
                     <div class="input-field col s12">
-                        <label for="buildingName" style="position:static;">Building Name</label>
+                        <label for="buildingName" style="position:static;">Building</label>
                         <select name="buildingChoice" id="buildingChoice" style="display:static;" required>
-                            <option value="" disabled selected>Choose a building</option>
+                            
                     `;
                     //Populates the select with all the buildings
                     {% for building in buildings %}
-                        html += `
-                            <option value="{{building.id}}">{{building.name}}</option>
-                        `
+                        {% if building.id == 1%}
+                            html += `<option value="1" selected>N/A</option>`
+                        {% else %}
+                            html += `<option value="{{building.id}}">{{building.name}}</option>`
+                        {% endif %}    
                     {% endfor %}
 
                     html += `
@@ -145,16 +146,19 @@
             //If it was a building i.e. a shape:
             if(type === 'polygon' || type === 'circle' || type === 'rectangle'){
                 var geoJSON = layer.toGeoJSON();
-                geoJSONString = JSON.stringify(geoJSON); //Prepare the geoJSON representation of the shape to be sent to the backend
+                geoJSONString = JSON.stringify(geoJSON);
+                console.log(geoJSONString) //Prepare the geoJSON representation of the shape to be sent to the backend
                 if(mode === "redraw"){ //Check if this is a new building, or re-drawing a previous one.
-                    if(currentBuilding != undefined){
+                    if(currentBuilding != null){
                         let field = document.querySelector('#newDrawingCoords');
+                        console.log("in if statement")
                         console.log(field);
-                        newDrawingCoords.value = geoJSONString;
+                        field.value = geoJSONString;
                     }
                     return;
                 }
-
+                closeContainer();
+                currentBuilding = layer;
                 let pane = document.querySelector('#pane');
                 let html = `
                 <div class="row" id="addBuildingForm">
@@ -180,9 +184,7 @@
 
                     html += `
                     </select>
-                    <input type="hidden" name="geoJSON" id="geoJSON" value='${geoJSONString}'>
-
-                    
+                    <input type="hidden" name="geoJSON" id="geoJSON" value='${geoJSONString}'>                    
                       <button class="waves-effect waves-light btn" type="submit">Add Building</button>
                       <input class="waves-effect waves-light white btn black-text right" type="button" value="Cancel" onclick="cancelAdd()">   
                 </div>
@@ -203,8 +205,11 @@
 
         //Just closes the pane and removes the marker that was initially put down when adding a marker. May be modified to also remove cancelled buildings.
         function cancelAdd(){
-            if(currentMarker != undefined){
+            if(currentMarker != null){
                 map.removeLayer(currentMarker);
+            }
+            if(currentBuilding != null){
+                drawnItems.removeLayer(currentBuilding);
             }
             closeContainer();
         }
@@ -448,6 +453,7 @@
                     <img class="materialboxed" src="${marker.image}" height="200" style="object-fit:cover; object-position: 20% 10%;">
                 </div>
                 `
+
             } else {
                 html += `<button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
                             <i class="material-icons">exit_to_app</i>
@@ -462,9 +468,14 @@
                     <p>${marker.building}</p>
                     <h6>Floor #</h6>
                     <p>${marker.floor}</p>
-                    <h6>Description</h6>
-                    <p>${marker.description}</p>
-                </div>
+                    <h6>Description</h6>`
+                    if(marker.description != ''){
+                        html += `<p>${marker.description}</p>`
+                    } else {
+                        html += `<p>No description provided</p>`
+                    }
+                    
+                html += `</div>
                 <div name="markerInfoFormButtons" id="markerInfoFormButtons" class="card-action" style="position:static;">
                     <input type="button" onclick="editMarkerView()" class="waves-effect waves-light orange btn" value="Edit">
                     <button type="button" onclick="deleteMarker(${marker.id})" class="waves-effect waves-light red btn right">Delete</button>
@@ -531,12 +542,15 @@
                     <div class="input-field col s12">
                         <label for="buildingName" style="position:static;">Building Name</label>
                         <select name="buildingChoice" id="buildingChoice" style="display:static;">
-                            <option value="" selected disabled>${currentMarker.building}</option>
                     `;
                     {% for building in buildings %}
                         if("{{building.name}}" != currentMarker.building){
                             html += `
                                <option value="{{building.id}}">{{building.name}}</option>
+                            `
+                        } else {
+                            html += `
+                               <option value="{{building.id}}" selected>{{building.name}}</option>
                             `
                         }
                     {% endfor %}
@@ -608,7 +622,7 @@
             let pane = document.querySelector('#pane');
             pane.innerHTML = '';
             pane.style.left = '-300px';
-            if(currentMarker != undefined){ //Disables dragging on the current marker if it was enabled before.
+            if(currentMarker != null){ //Disables dragging on the current marker if it was enabled before.
                 currentMarker.dragging.disable();
                 if(oldLat != null && oldLng != null){
                     currentMarker.setLatLng([oldLat, oldLng]);
@@ -619,6 +633,7 @@
         //All functions moved to separate functions. This function remains empty for now.
         function onMapClick(e){
             //I used to be very long
+            
         }
 
         //This function isn't called in the current state of the website, but may be used/expanded later.
@@ -626,12 +641,20 @@
             map.setView([10.646447, -61.400807], 13);
         }
         
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        //Clean basemap no building names
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+            minZoom: 16,
+            maxZoom: 50,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+            subdomains: 'abcd'
+        }).addTo(map);
+
+        //Original basemap with building names
+        /*L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             minZoom: 16,
             maxZoom: 50,
             attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        }).addTo(map);
-
+        }).addTo(map);*/
         // Prevent scrolling
         document.body.style.overflow = 'hidden';
     </script>
