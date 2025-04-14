@@ -6,7 +6,7 @@
 
 {% block content %}
     <div id="map" style="height: 100vh; width: 100%; position: fixed; top: 0; left: 0;"></div>
-    <div id="pane" class="card col s4" style="position: fixed; top: 50%; left: -300px; transform: translateY(-50%); z-index: 1000; width: 300px; background: white; overflow:auto; transition: left 0.3s ease; height:100%">
+    <div id="pane" class="card col s4" style="position: fixed; top: 50%; left: -300px; transform: translateY(-50%); z-index: 1000; width: 300px; background: white; overflow-x:hidden; transition: left 0.3s ease; height:100%">
     </div>
     
 
@@ -37,6 +37,14 @@
 
         .btn-floating.transparent {
             box-shadow: none;
+        }
+
+        
+        .leaflet-control-layers .leaflet-control-layers-list label {
+            font-family: "Pridi", serif;
+            font-weight: 400;
+            font-size: 1em;
+            color: #333;
         }
     </style>
     <script type="text/javascript">
@@ -310,7 +318,7 @@
                     </select>
                     <input type="hidden" name="geoJSON" id="geoJSON" value='${geoJSONString}'>                    
                       <button class="waves-effect waves-light btn" type="submit">Add Building</button>
-                      <input class="waves-effect waves-light white btn black-text right" type="button" value="Cancel" onclick="cancelAdd()">   
+                      <input class="waves-effect waves-light white btn black-text right" type="button" value="Cancel" onclick="closeContainer()">   
                 </div>
             </form>
         </div>
@@ -496,17 +504,22 @@
             currentBuilding = e.target.feature.properties
             pane = document.querySelector('#pane');
             let html = `
-    <div class="row">
+    <div class="row" style="overflow-x: hidden;">
         <div class="col s12">
-            <button style="float: right; background: none; border: none; font-size: 1.5em; cursor: pointer;" onclick="closeContainer()">×</button>
+            <div class="col s12" style="background-color: #d4edda; margin-bottom: 1em;">
+                <p style="font-family: 'Pridi', cursive">Building Information</p>
+                <button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
+                    <i class="material-icons">exit_to_app</i>
+                </button>
+            </div>
             <form method="POST" action="/editBuilding/${building.id}">
             <div>
                 <div name="buildingInfoForm" id="buildingInfoForm" class="card-content">
-                    <span class="card-title"><h5>Building Information</h5></span>
-                    <h6>Name</h6>
-                    <p>${building.name}</p>
-                    <h6>Faculty</h6>
-                    <p>${building.facultylong}</p>
+                    <span class="card-title"></span>
+                    <h6 style="font-family: 'Bungee Spice', cursive">Name</h6>
+                    <p style="font-family: 'Pridi', cursive">${building.name}</p>
+                    <h6 style="font-family: 'Bungee Spice', cursive">Faculty</h6>
+                    <p style="font-family: 'Pridi', cursive">${building.facultylong}</p>
                 </div>
                 <div name="buildingInfoFormButtons" id="buildingInfoFormButtons" class="card-action" style="position:static;">
                     <input type="button" onclick="editBuildingView()" class="waves-effect waves-light orange btn" value="Edit">
@@ -606,8 +619,10 @@
             if(marker.image != ''){
                 html += `
                 <div class="card-image">
+                    <button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
+                        <i class="material-icons">exit_to_app</i>
+                    </button>
                     <img class="materialboxed" src="${marker.image}" height="200" style="border-radius: 0; object-fit:cover; object-position: 20% 10%;">
-                    <button style="float: right; background: none; border: none; font-size: 1.5em; cursor: pointer; z-index:1500;" onclick="closeContainer()">×</button>
                 </div>
                 `
 
@@ -646,7 +661,15 @@
             pane.style.left = '10px';
             // Initialize Materialboxed for the image
             var elems = document.querySelectorAll('.materialboxed');
-            var instances = M.Materialbox.init(elems);
+            var instances = M.Materialbox.init(elems, {
+                onCloseEnd: function() {
+                    // Reinitialize scrollable behavior for marker popup and edit panel
+                    let pane = document.querySelector('#pane');
+                    if (pane) {
+                        pane.style.overflow = 'auto';
+                    }
+                }
+            });
             
         }
         
