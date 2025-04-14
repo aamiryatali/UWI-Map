@@ -15,6 +15,26 @@
 
 {% block code %}
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bungee+Spice&family=Pridi:wght@200;300;400;500;600;700&display=swap');
+
+        .bungee-spice-regular {
+            font-family: "Bungee Spice", sans-serif;
+            font-weight: 400;
+            font-style: normal;
+        }
+
+        .pridi-semibold {
+            font-family: "Pridi", serif;
+            font-weight: 600;
+            font-style: normal;
+        }
+
+        label {
+            font-family: "Bungee Spice", sans-serif;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
         .btn-floating.transparent {
             box-shadow: none;
         }
@@ -438,8 +458,8 @@
             let html = `
     <div class="row">
         <div class="col s12">
-        <div class ="col s12" style="background-color:skyblue;">
-	        <p>Marker Information</p>
+        <div class ="col s12" style="background-color: #d4edda;">
+	        <p style="font-family: 'Pridi', cursive">Marker Information</p>
         </div>
             <form method="POST" action="/editMarker/${marker.id}" enctype="multipart/form-data">
             <div>`
@@ -462,23 +482,23 @@
             html += `
                 <div name="markerInfoForm" id="markerInfoForm" class="card-content">
                     <span class="card-title"></span>
-                    <h6>Name</h6>
-                    <p>${marker.name}</p>
-                    <h6>Building</h6>
-                    <p>${marker.building}</p>
-                    <h6>Floor #</h6>
-                    <p>${marker.floor}</p>
-                    <h6>Description</h6>`
+                    <h6 style="font-family: 'Bungee Spice', cursive">Name</h6>
+                    <p style="font-family: 'Pridi', cursive">${marker.name}</p>
+                    <h6 style="font-family: 'Bungee Spice', cursive">Building</h6>
+                    <p style="font-family: 'Pridi', cursive">${marker.building}</p>
+                    <h6 style="font-family: 'Bungee Spice', cursive">Floor Number</h6>
+                    <p style="font-family: 'Pridi', cursive">${marker.floor}</p>
+                    <h6 style="font-family: 'Bungee Spice', cursive">Description</h6>`
                     if(marker.description != ''){
-                        html += `<p>${marker.description}</p>`
+                        html += `<p style="font-family: 'Pridi', cursive">${marker.description}</p>`
                     } else {
-                        html += `<p>No description provided</p>`
+                        html += `<p style="font-family: 'Pridi', cursive">No description provided</p>`
                     }
                     
                 html += `</div>
                 <div name="markerInfoFormButtons" id="markerInfoFormButtons" class="card-action" style="position:static;">
-                    <input type="button" onclick="editMarkerView()" class="waves-effect waves-light orange btn" value="Edit">
-                    <button type="button" onclick="deleteMarker(${marker.id})" class="waves-effect waves-light red btn right">Delete</button>
+                    <input type="button" onclick="editMarkerView()" class="waves-effect waves-light orange btn" value="Edit" style="font-family: 'Pridi', cursive">
+                    <button type="button" onclick="deleteMarker(${marker.id})" class="waves-effect waves-light red btn right" style="font-family: 'Pridi', cursive">Delete</button>
                 </div>
             </div>
             </form>
