@@ -41,10 +41,6 @@
     </style>
     <script type="text/javascript">
         var map = L.map('map').setView([10.642529, -61.400225], 13); // Sets the initial map position and zoom level
-        var markerLayer = L.layerGroup();
-        var overlayMaps = {  // Filter categories
-            "Markers" : markerLayer
-        };
 
         var drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
@@ -70,7 +66,6 @@
             keepCurrentZoomLevel: true
         }).addTo(map);
 
-        var layerControl = L.control.layers(null, overlayMaps, { position: 'bottomright' }).addTo(map);
         //var marker = L.marker([10.6464474, -61.4008066]).addTo(map);
         //marker.on('click', onMarkerClick);
         var mode = 'view';
@@ -78,6 +73,115 @@
         var currentBuilding;
         var drawingLayer = L.geoJSON().addTo(map)
 
+        var eng = L.layerGroup();
+        var fst = L.layerGroup();
+        var fhe = L.layerGroup();
+        var fol = L.layerGroup();
+        var ffa = L.layerGroup();
+        var fss = L.layerGroup();
+        var fms = L.layerGroup();
+        var fsp = L.layerGroup();
+        var admin = L.layerGroup();
+        var other = L.layerGroup();
+
+        var f0 = L.layerGroup();
+        var f1 = L.layerGroup();
+        var f2 = L.layerGroup();
+        var f3 = L.layerGroup();
+        var f4 = L.layerGroup();
+        var f5 = L.layerGroup();
+        var f6 = L.layerGroup();
+
+        var eeweweLayers = {  // Filter categories
+            
+        };
+
+        var facultyLayers = [
+            {
+                label: "Faculties",
+                selectAllCheckbox: true,
+                collapsed: true,
+                children: [
+                    {
+                        label: 'Faculty of Engineering',
+                        layer: eng
+                    },
+                    {
+                        label: 'Faculty of Science & Technology',
+                        layer: fst
+                    },
+                    {
+                        label: 'Faculty of Humanities & Education',
+                        layer: fhe
+                    },
+                    {
+                        label: 'Faculty of Law',
+                        layer: fol 
+                    },
+                    {
+                        label: 'Faculty of Food & Agriculture',
+                        layer: ffa
+                    },
+                    {
+                        label: 'Faculty of Social Sciences',
+                        layer: fss
+                    },
+                    {
+                        label: 'Faculty of Medical Sciences',
+                        layer: fms
+                    },
+                    {
+                        label: 'Faculty of Sport',
+                        layer: eng 
+                    },
+                    {
+                        label: 'Administrative & Student Services, Guild',
+                        layer: admin
+                    },
+                    {
+                        label: 'Institutes, Centers, Services, Recreation, Halls etc',
+                        layer: other
+                    }
+                ]
+            },
+            {
+                label: "Floors",
+                selectAllCheckbox: true,
+                collapsed: true,
+                children: [
+                    {
+                        label: 'Floor 0',
+                        layer: f0
+                    },
+                    {
+                        label: 'Floor 1',
+                        layer: f1
+                    },
+                    {
+                        label: 'Floor 2',
+                        layer: f2
+                    },
+                    {
+                        label: 'Floor 3',
+                        layer: f3
+                    },
+                    {
+                        label: 'Floor 4',
+                        layer: f4
+                    },
+                    {
+                        label: 'Floor 5',
+                        layer: f5
+                    },
+                    {
+                        label: 'Floor 6',
+                        layer: f6
+                    }
+                ]
+            }
+        ]
+        var layerControl = L.control.layers.tree(null, facultyLayers, { position: 'bottomright', collapsed: true }).addTo(map);
+        
         map.doubleClickZoom.disable();
         map.addControl(drawControl);
         map.on('load', addObjects()); // Call the addMarkers() function when the map loads
@@ -246,34 +350,69 @@
                 newMarker.building = "{{marker.building.name}}"
                 newMarker.image = "{{marker.image}}"
                 newMarker.on('click', onMarkerClick);
-                markerLayer.addLayer(newMarker).addTo(map); // Add each marker to the layerGroup
+             // Add each marker to the layerGroup
                 newMarker.bindTooltip("{{marker.name}}", {permanent: true, offset: [-15, 40], direction: "center", className: 'transparent-tooltip'});
                 var markerColorIcon;
+
+                switch(newMarker.floor){
+                    case 0:
+                        f0.addLayer(newMarker).addTo(map);;
+                        break;
+                    case 1:
+                        f1.addLayer(newMarker).addTo(map);;
+                        break;
+                    case 2:
+                        f2.addLayer(newMarker).addTo(map);;
+                        break;
+                    case 3:
+                        f3.addLayer(newMarker).addTo(map);;
+                        break;
+                    case 4:
+                        f4.addLayer(newMarker).addTo(map);;
+                        break;
+                    case 5:
+                        f5.addLayer(newMarker).addTo(map);;
+                        break;
+                    case 6:
+                        f6.addLayer(newMarker).addTo(map);;
+                        break;
+                    default:
+                        f0.addLayer(newMarker).addTo(map);;
+                        break;
+                }
 
                 //Dynamically change the color of the marker icon depending on the faculty.
                 switch("{{marker.building.faculty.abbr}}") {
                     case "FST":
+                        fst.addLayer(newMarker).addTo(map);
                         markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png"
                         break;
                     case "FHE":
+                        fhe.addLayer(newMarker).addTo(map);
                         markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png"
                         break;
                     case "ENG":
+                        eng.addLayer(newMarker).addTo(map);
                         markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png"
                         break;
                     case "FOL":
+                        fol.addLayer(newMarker).addTo(map);
                         markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-black.png"
                         break;
                     case "FFA":
+                        ffa.addLayer(newMarker).addTo(map);
                         markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png"
                         break;
                     case "FSS":
+                        fss.addLayer(newMarker).addTo(map);
                         markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png"
                         break;
                     case "Admin/Guild":
+                        admin.addLayer(newMarker).addTo(map);
                         markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-violet.png"
                         break;
                     default:
+                        other.addLayer(newMarker).addTo(map);
                         markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png"
                         break;
                 }
@@ -467,10 +606,8 @@
             if(marker.image != ''){
                 html += `
                 <div class="card-image">
-                    <button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
-                        <i class="material-icons">exit_to_app</i>
-                    </button>
-                    <img class="materialboxed" src="${marker.image}" height="200" style="object-fit:cover; object-position: 20% 10%;">
+                    <img class="materialboxed" src="${marker.image}" height="200" style="border-radius: 0; object-fit:cover; object-position: 20% 10%;">
+                    <button style="float: right; background: none; border: none; font-size: 1.5em; cursor: pointer; z-index:1500;" onclick="closeContainer()">×</button>
                 </div>
                 `
 
@@ -507,28 +644,10 @@
             `;
             pane.innerHTML = html;
             pane.style.left = '10px';
-
             // Initialize Materialboxed for the image
             var elems = document.querySelectorAll('.materialboxed');
-            var instances = M.Materialbox.init(elems, {
-                onOpenStart: function(el) {
-                    var closeButton = el.closest('.card-image').querySelector('.btn-floating');
-                    if (closeButton) {
-                        closeButton.style.display = 'none';
-                    }
-                },
-                onCloseEnd: function(el) {
-                    var closeButton = el.closest('.card-image').querySelector('.btn-floating');
-                    if (closeButton) {
-                        closeButton.style.display = 'block';
-                    }
-                    // Ensure the pane remains scrollable
-                    let pane = document.querySelector('#pane');
-                    if (pane) {
-                        pane.style.overflowY = 'auto';
-                    }
-                }
-            });
+            var instances = M.Materialbox.init(elems);
+            
         }
         
         //"Manually" sends a GET request to /deleteMarker
