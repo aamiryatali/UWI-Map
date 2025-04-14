@@ -52,7 +52,8 @@ app.cli.add_command(user_cli) # add the group to the cli
 def list_user_command():
     list = Marker.query.all()
     for m in list:
-        print(f'{m.x} | {m.y} | {m.image}')
+        print(f'{m.x} | {m.y} | {m.image} | {m.building}')
+        
 
 app.cli.add_command(user_cli) # add the group to the cli
 
@@ -60,7 +61,9 @@ app.cli.add_command(user_cli) # add the group to the cli
 def list_buildings_command():
     buildings = Building.query.all()
     for building in buildings:
-        print(f'{building.name} - {building.drawingCoords}')
+        for marker in building.markers:
+            print(f'{building.name} - {marker.name}')
+        
         
 app.cli.add_command(user_cli) # add the group to the cli
 
