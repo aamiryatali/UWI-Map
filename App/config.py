@@ -10,11 +10,11 @@ def load_config(app, overrides):
         config = {'ENV': os.environ.get('ENV', 'DEVELOPMENT')}
         delta = 7
         if config['ENV'] == "PRODUCTION":
-            config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI')
-            config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
-            delta = os.environ.get('JWT_ACCESS_TOKEN_EXPIRES')
+            app.config.from_envvar("SQLALCHEMY_DATABASE_URI")
+            app.config.from_envvar("SECRET_KEY")
+            app.config.from_envvar('JWT_ACCESS_TOKEN_EXPIRES')
         else:
-              app.config.from_object('App.default_config')
+            app.config.from_object('App.default_config')
             
     app.config.from_prefixed_env()
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
