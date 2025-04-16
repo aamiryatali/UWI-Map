@@ -4,7 +4,7 @@ class Marker(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     x =  db.Column(db.Double, nullable=False)
     y = db.Column(db.Double, nullable=False)
-    name = db.Column(db.String(20), nullable=False, unique=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
     image = db.Column(db.String(200), nullable=True, default='')
     floor = db.Column(db.Integer, nullable=False)
     description = db.Column(db.String(100), nullable=True)
