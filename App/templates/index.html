@@ -79,6 +79,7 @@
         var mode = 'view';
         var currentMarker;
         var currentBuilding;
+        var previousDrawing = null;
         var drawingLayer = L.geoJSON().addTo(map)
 
         var eng = L.layerGroup();
@@ -282,9 +283,11 @@
                 console.log(geoJSONString) //Prepare the geoJSON representation of the shape to be sent to the backend
                 if(mode === "redraw"){ //Check if this is a new building, or re-drawing a previous one.
                     if(currentBuilding != null){
+                        if(previousDrawing != null){
+                            drawnItems.removeLayer(previousDrawing);
+                        }    
+                        previousDrawing = layer;
                         let field = document.querySelector('#newDrawingCoords');
-                        console.log("in if statement")
-                        console.log(field);
                         field.value = geoJSONString;
                     }
                     return;
@@ -296,7 +299,7 @@
                 <div class="row" id="addBuildingForm">
         <div class="col s12">
         <button style="float: right; background: none; border: none; font-size: 1.5em; cursor: pointer;" onclick="cancelAdd()">×</button>
-            <form action="/addBuilding" method="POST" style='padding:2em;'>
+            <form action="/addBuilding" enctype="multipart/form-data" method="POST" style='padding:2em;'>
                 <div class="row">
                     <div class="input-field col s12">
                         <label for="buildingName" style="position:static;">Building Name</label>
@@ -315,7 +318,21 @@
                     {% endfor %}
 
                     html += `
-                    </select>
+                        </select>
+                    </div>
+                    <div class="input-field col s12">
+                        <label for="imageUpload" style="position:static;">Upload Image (Optional)</label>
+                    </div>
+                    <div class="file-field input-field col s12">
+                        <div class="btn-small blue">
+                            <span><i class="material-icons">file_upload</i></span>
+                            <input type="file" name="imageUpload" id="imageUpload" accept="image/*">
+                        </div>
+                        <div class="file-path-wrapper">
+                            <input class="file-path validate" type="text">
+                        </div>
+                    </div>
+
                     <input type="hidden" name="geoJSON" id="geoJSON" value='${geoJSONString}'>                    
                       <button class="waves-effect waves-light btn" type="submit">Add Building</button>
                       <input class="waves-effect waves-light white btn black-text right" type="button" value="Cancel" onclick="closeContainer()">   
@@ -444,6 +461,7 @@
                 newDrawingCoords.properties["name"] = name;
                 newDrawingCoords.properties["faculty"] = "{{building.faculty.abbr}}"
                 newDrawingCoords.properties["facultylong"] = "{{building.faculty.name}}"
+                newDrawingCoords.properties["image"] = "{{building.image}}"
                 drawingLayer.addData(newDrawingCoords)
             {% endfor %}
             
@@ -512,8 +530,23 @@
                     <i class="material-icons">exit_to_app</i>
                 </button>
             </div>
-            <form method="POST" action="/editBuilding/${building.id}">
-            <div>
+            <form method="POST" enctype="multipart/form-data" action="/editBuilding/${building.id}">
+            <div>`;
+                if(building.image != ''){
+                    html += `
+                    <div class="card-image">
+                        <button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
+                            <i class="material-icons">exit_to_app</i>
+                        </button>
+                        <img class="materialboxed" src="${building.image}" height="200" style="border-radius: 0; object-fit:cover; object-position: 20% 10%;">
+                    </div>
+                    `;
+                } else {
+                    html += `<button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
+                                <i class="material-icons">exit_to_app</i>
+                             </button>`
+                }
+                html += `
                 <div name="buildingInfoForm" id="buildingInfoForm" class="card-content">
                     <span class="card-title"></span>
                     <h6 style="font-family: 'Bungee Spice', cursive">Name</h6>
@@ -532,6 +565,17 @@
             `;
             pane.innerHTML = html;
             pane.style.left = '10px';
+            var elems = document.querySelectorAll('.materialboxed');
+            var instances = M.Materialbox.init(elems, {
+                onCloseEnd: function() {
+                    // Reinitialize scrollable behavior for marker popup and edit panel
+                    let pane = document.querySelector('#pane');
+                    if (pane) {
+                        pane.style.overflow = 'auto';
+                    }
+                }
+            });
+
         }
 
         //Brings up the edit form for buildings
@@ -555,16 +599,33 @@
                             `
                         } else {
                             html += `
-                            <option value="{{faculty.id}}" selected disabled>{{faculty.abbr}} - {{faculty.name}}</option>
+                            <option value="{{faculty.id}}" selected>{{faculty.abbr}} - {{faculty.name}}</option>
                             `
                         }
                     {% endfor %}
                     html += `
                         </select>
                     </div>
-                    <button class="waves-effect waves-light blue btn" type="button" onclick="reDraw()">Re-draw</button>
-                    <div id="reDrawTooltip" name="reDrawTooltip"></div>
-                    <input type="hidden" id="newDrawingCoords" name="newDrawingCoords" value="">
+
+                    <div>
+                        <button class="waves-effect waves-light blue btn" type="button" onclick="reDraw()">Re-draw</button>
+                        <div id="reDrawTooltip" name="reDrawTooltip"></div>
+                        <input type="hidden" id="newDrawingCoords" name="newDrawingCoords" value="">
+                    </div>
+
+                    <div class="input-field col s12">
+                        <label for="imageUpload" style="position:static">Change Image</label>
+                    </div>
+                    <div class="file-field col s12">
+                        <div class="btn-small blue">
+                            <span><i class="material-icons">file_upload</i></span>
+                            <input type="file" name="imageUpload" id="imageUpload" accept="image/*">
+                        </div>
+                        <div class="file-path-wrapper">
+                            <input class="file-path validate" type="text" value="${currentBuilding.image}">
+                        </div>
+                    </div> 
+
                 `;
                 infoPane.innerHTML = html;
                 //Have to initialize select options once again

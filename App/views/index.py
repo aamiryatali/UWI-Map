@@ -1,7 +1,7 @@
 import urllib.request
 from flask import Blueprint, redirect, render_template, request, send_from_directory, jsonify, current_app, flash
 from flask_jwt_extended import jwt_required, current_user as jwt_current_user
-from App.controllers import create_user, initialize, create_building, get_marker
+from App.controllers import create_user, initialize, create_building, get_marker, get_building
 from App.models import db, Marker, Building, Faculty
 from werkzeug.utils import secure_filename
 import os
@@ -56,7 +56,8 @@ def add_marker():
         if marker:
             if imageFile:
                 secureFilename = upload_file(imageFile)
-                marker.addImage("static/images/" + secureFilename)
+                if secureFilename:
+                    marker.addImage("static/images/" + secureFilename)
             flash(f'Successfully added {data["markerName"]} to {building.name}')
         else:
             flash("Could not add marker to building")
@@ -102,6 +103,13 @@ def delete_marker(id):
 @index_views.route('/addBuilding', methods=['POST'])
 def addBuilding():
     data = request.form
+    if get_building(data['buildingName']):
+        flash('Building name already exists!')
+        return redirect(request.referrer)
+    
+    #Get the image file
+    imageFile = request.files['imageUpload']
+    
     print(data['buildingName'])
     print(data['facultyChoice'])
     print(json.dumps(data['geoJSON']))
@@ -109,7 +117,12 @@ def addBuilding():
     if not building:
         flash("Could not create building")
         return redirect(request.referrer)
-    flash(f'Successfully added building: {data["buildingName"]}')
+    else:
+        if imageFile:
+            secureFilename = upload_file(imageFile)
+            if secureFilename:
+                building.addImage("static/images/" + secureFilename)
+        flash(f'Successfully added building: {data["buildingName"]}')
     return redirect(request.referrer)
 
 @index_views.route('/editBuilding/<id>', methods=['POST'])
@@ -118,11 +131,18 @@ def editBuilding(id):
     if not building:
         flash('Building not found')
         return redirect(request.referrer)
+    
     data = request.form
+    imageFile = request.files['imageUpload']
+    print(data)
     building.name = data['buildingName']
     building.facultyID = data['facultyChoice']
     if data['newDrawingCoords'] != "":
         building.drawingCoords = data['newDrawingCoords']
+    if imageFile:
+            secureFilename = upload_file(imageFile)
+            building.addImage("static/images/" + secureFilename)
+        
     db.session.add(building)
     db.session.commit()
     return redirect(request.referrer)

@@ -7,12 +7,18 @@ class Building(db.Model):
     drawingCoords = db.Column(db.JSON)
     markers = db.relationship('Marker', backref='building')
     facultyID = db.Column(db.Integer, db.ForeignKey('faculty.id'))
+    image = db.Column(db.String(200), nullable=True, default='')
 
     def __init__(self, name, facultyID, drawingCoords):
         self.name = name
         self.facultyID = facultyID
         self.drawingCoords = drawingCoords
 
+    def addImage(self, image):
+        self.image = image
+        db.session.add(self)
+        db.session.commit()
+        
     def getMarkers(self):
         return self.markers
     
