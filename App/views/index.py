@@ -41,6 +41,16 @@ def init():
         return jsonify(message='db initialized!')
     flash('Could not get deployment type(PRODUCTION/DEVELOPMENT)')
     return redirect(url_for('index_views.index_page'))
+
+@index_views.route('/superinit', methods=['GET'])
+def superinit():
+  #  if os.environ.get("ENV") == "PRODUCTION":
+   #     flash('Server is currently running in production mode, initialize blocked')
+ #       return redirect(url_for('index_views.index_page')
+    initialize()
+    return jsonify(message='db initialized!')
+   # flash('Could not get deployment type(PRODUCTION/DEVELOPMENT)')
+  #  return redirect(url_for('index_views.index_page'))
     
 
 @index_views.route('/health', methods=['GET'])
