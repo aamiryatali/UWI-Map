@@ -1,5 +1,5 @@
 import urllib.request
-from flask import Blueprint, redirect, render_template, request, send_from_directory, jsonify, current_app, flash
+from flask import Blueprint, redirect, render_template, request, send_from_directory, jsonify, current_app, flash, url_for
 from flask_jwt_extended import jwt_required, current_user as jwt_current_user
 from App.controllers import create_user, initialize, create_building, get_marker
 from App.models import db, Marker, Building, Faculty
@@ -35,11 +35,13 @@ def index_page():
 def init():
     if os.environ.get("ENV") == "PRODUCTION":
         flash('Server is currently running in production mode, initialize blocked')
-        return redirect(request.referrer)
+        return redirect(url_for('index_views.index_page'))
     elif os.environ.get("ENV") == "DEVELOPMENT":
         initialize()
         return jsonify(message='db initialized!')
-    return redirect(request.referrer)
+    flash('Could not get deployment type(PRODUCTION/DEVELOPMENT)')
+    return redirect(url_for('index_views.index_page'))
+    
 
 @index_views.route('/health', methods=['GET'])
 def health_check():
