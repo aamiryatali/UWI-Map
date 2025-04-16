@@ -61,8 +61,8 @@ app.cli.add_command(user_cli) # add the group to the cli
 def list_buildings_command():
     buildings = Building.query.all()
     for building in buildings:
-        for marker in building.markers:
-            print(f'{building.name} - {marker.name}')
+        #for marker in building.markers:
+        print(f'{building.name} - {building.image}')
         
         
 app.cli.add_command(user_cli) # add the group to the cli
