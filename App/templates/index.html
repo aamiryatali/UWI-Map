@@ -542,7 +542,7 @@
         const autocompleteInstance = M.Autocomplete.init(searchInput, {
             data: markerNames,
             minLength: 0,
-            limit:5,
+            limit:3,
             onAutocomplete: function(selectedName) {
                 filterMarkersByName(selectedName); // Ensure this handles selection
             }
@@ -568,6 +568,13 @@
                 const markerName = layer.name.toLowerCase();
                 if (markerName.includes(query)) {
                     if (!map.hasLayer(layer)) map.addLayer(layer);
+
+                    //If exact match, center and zoom
+                    if (markerName === query) {
+                        map.setView(layer.getLatLng(), 18);
+                        foundMatch = true;
+                    }
+
                 } else {
                     if (map.hasLayer(layer)) map.removeLayer(layer);
                 }
