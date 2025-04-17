@@ -23,17 +23,34 @@
   </head>
   <body>
     {% if not is_authenticated %}
-    <form class="right navbar-form" method="POST" action="/login" style="position: fixed; top: 10px; right: 20px; display: flex; flex-wrap: nowrap; align-items: center; z-index: 1500;">
-        <div class="input-field" style="margin-right: 10px; display: none;">
-            <input placeholder="username" value="bob" name="username" type="text" class="validate" required>
-            <label for="username" style="font-family: Arial, sans-serif !important;">username</label>
+    <div style="position: fixed; top: 10px; right: 6px; z-index: 1500;">
+        <a class="btn-floating btn-large waves-effect waves-light white" id="login-icon" style="background-image: url('https://static.vecteezy.com/system/resources/thumbnails/009/292/244/small/default-avatar-icon-of-social-media-user-vector.jpg'); background-size: cover; background-position: center;"></a>
+        <div id="login-popup" style="display: none; position: absolute; top: 60px; right: 0; background: white; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); padding: 1em; border-radius: 8px; z-index: 1500;">
+            <form method="POST" action="/login">
+                <div class="input-field">
+                    <input placeholder="username" value="bob" name="username" type="text" class="validate" required>
+                    <label for="username" style="font-family: Arial, sans-serif !important;">Username</label>
+                </div>
+                <div class="input-field">
+                    <input placeholder="password" value="bobpass" name="password" type="password" class="validate" required>
+                    <label for="password" style="font-family: Arial, sans-serif !important;">Password</label>
+                </div>
+                <button type="submit" class="btn waves-effect waves-light">Login</button>
+            </form>
         </div>
-        <div class="input-field" style="margin-right: 10px; display: none;">
-            <input placeholder="password" value="bobpass" name="password" type="password" class="validate" required>
-            <label for="password" style="font-family: Arial, sans-serif !important;">Password</label>
-        </div>
-        <button type="submit" class="btn waves-effect waves-light">Login</button>
-    </form>
+    </div>
+    <script>
+        const loginIcon = document.getElementById('login-icon');
+        const loginPopup = document.getElementById('login-popup');
+        loginIcon.addEventListener('click', () => {
+            loginPopup.style.display = loginPopup.style.display === 'none' ? 'block' : 'none';
+        });
+        document.addEventListener('click', (e) => {
+            if (!loginPopup.contains(e.target) && e.target !== loginIcon) {
+                loginPopup.style.display = 'none';
+            }
+        });
+    </script>
     {% endif %}
     <div class="input-field" style="position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 1100; width: 300px;">
       <input type="text" id="marker-search" class="autocomplete" placeholder="Search for a marker">
