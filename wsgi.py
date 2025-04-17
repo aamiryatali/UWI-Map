@@ -1,9 +1,9 @@
 import click, pytest, sys
-from flask import Flask
+from flask import Flask, jsonify
 from flask.cli import with_appcontext, AppGroup
 
 from App.database import db, get_migrate
-from App.models import User, Marker, Building
+from App.models import User, Marker, Building, Faculty
 from App.main import create_app
 from App.controllers import ( create_user, get_all_users_json, get_all_users, initialize, create_building)
 
@@ -64,7 +64,28 @@ def list_buildings_command():
         #for marker in building.markers:
         print(f'{building.name} - {building.image}')
         
-        
+@user_cli.command('get-data')
+def getclidata():
+    markers = Marker.query.all()
+    buildings = Building.query.all()
+    faculties = Faculty.query.all()
+    test = {
+        'marker': 'hi'
+    }
+    dictt = {
+        'markers' : [marker.to_dict() for marker in markers],
+        'buildings' : [building.to_dict() for building in buildings],
+        'faculties' : [faculty.to_dict() for faculty in faculties]
+    }
+    building = Building.query.all
+    #print([building.to_dict() for building in buildings])
+    #print([marker.to_dict() for marker in markers])
+    #print([faculty.to_dict() for faculty in faculties])
+    ljson = jsonify(dictt)
+    buildings = ljson['buildings']
+    for building in buildings:
+        print(building['faculty']['name'])
+
 app.cli.add_command(user_cli) # add the group to the cli
 
 '''

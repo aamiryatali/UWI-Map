@@ -53,7 +53,10 @@
     </style>
     <script type="text/javascript">
         var map = L.map('map').setView([10.642529, -61.400225], 13); // Sets the initial map position and zoom level
-        
+        var markers;
+        var faculties;
+        var buildings;
+
         var drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
 
@@ -107,7 +110,7 @@
         var f6 = L.layerGroup();
 
         const floors = [f0, f1, f2, f3, f4, f5, f6]
-        const faculties = [eng, fst, fhe, fol, ffa, fss, fms, fsp, admin, other]
+        const shortFaculties = [eng, fst, fhe, fol, ffa, fss, fms, fsp, admin, other]
 
         var facultyLayers = [
             {
@@ -205,7 +208,7 @@
             f.addTo(map);
             filterSelectedFloors.add(f)
         }
-        for(let fac of faculties){
+        for(let fac of shortFaculties){
             fac.addTo(map);
             filterSelectedFaculties.add(fac)
         }
@@ -219,14 +222,29 @@
             }, true);
         });
 
+        async function loadView(){
+            await fetch('/get-data')
+                .then(response => response.json())
+                .then(data => {
+                    markers = data['markers']
+                    buildings = data['buildings']
+                    faculties = data['faculties']
+            })
+            markerLayer.clearLayers();
+            drawingLayer.clearLayers();
+            drawnItems.clearLayers();
+            addObjects(markers, buildings, faculties); // Call the addMarkers() function when the map loads
+        }
+        loadView();
+        
         map.doubleClickZoom.disable();
         map.addControl(drawControl);
-        map.on('load', addObjects()); // Call the addMarkers() function when the map loads
+        
         map.on('click', onMapClick);
         map.on(L.Draw.Event.CREATED, function(e){
             var layer = e.layer;
             var type = e.layerType;
-            console.log(layer)
+            console.log("Layer created:" + layer)
             drawnItems.addLayer(layer);
 
             //If the drawn item was a marker
@@ -253,16 +271,15 @@
                     <div class="input-field col s12">
                         <label for="buildingName" style="position:static;">Building</label>
                         <select name="buildingChoice" id="buildingChoice" style="display:static;" required>
-                            
                     `;
                     //Populates the select with all the buildings
-                    {% for building in buildings %}
-                        {% if building.id == 1%}
+                    for(building of buildings){
+                        if(building['id'] == 1){
                             html += `<option value="1" selected>N/A</option>`
-                        {% else %}
-                            html += `<option value="{{building.id}}">{{building.name}}</option>`
-                        {% endif %}    
-                    {% endfor %}
+                        } else {
+                            html += `<option value="${building['id']}">${building['name']}</option>`
+                        }    
+                    }
 
                     html += `
                     </select>
@@ -297,7 +314,7 @@
     </div>`;
                 pane.innerHTML = html;
                 pane.style.left = '10px';
-
+                document.getElementById('addMarkerForm').addEventListener('submit', addMarker);
                 //Materialize select fields need these 2 lines to of code to actually initialize the options for some reson
                 var elems = document.querySelectorAll('select');
                 var instances = M.FormSelect.init(elems);
@@ -308,9 +325,8 @@
             if(type === 'polygon' || type === 'circle' || type === 'rectangle'){
                 var geoJSON = layer.toGeoJSON();
                 geoJSONString = JSON.stringify(geoJSON);
-                console.log(geoJSONString) //Prepare the geoJSON representation of the shape to be sent to the backend
                 if(mode === "redraw"){ //Check if this is a new building, or re-drawing a previous one.
-                    if(currentBuilding != null){
+                    if(currentBuilding != null && currentBuilding != undefined){
                         if(previousDrawing != null){
                             drawnItems.removeLayer(previousDrawing);
                         }    
@@ -339,11 +355,11 @@
                             <option value="" disabled selected>Choose a faculty</option>
                     `;
                     //Populates the select with all the faculties
-                    {% for faculty in faculties %}
+                    for(faculty of faculties){
                         html += `
-                            <option value="{{faculty.id}}">{{faculty.abbr}} - {{faculty.name}}</option>
+                            <option value="${faculty['id']}">${faculty['abbr']} - ${faculty['name']}</option>
                         `
-                    {% endfor %}
+                    }
 
                     html += `
                         </select>
@@ -370,6 +386,7 @@
     </div>`
                 pane.innerHTML = html;
                 pane.style.left = '10px';
+                document.getElementById('addBuildingForm').addEventListener('submit', addBuilding);
 
                 //Materialize select fields need these 2 lines to of code to actually initialize the options for some reson
                 var elems = document.querySelectorAll('select');
@@ -381,38 +398,51 @@
         // Move zoom controls under the layer control toggle, with some CSS styling done in <style>
         map.zoomControl.setPosition('bottomright');
 
+        async function addMarker(event){
+            event.preventDefault();
+            let form = event.target.elements;
+            let formData = new FormData(event.target);
+            
+            let response = await fetch('/addMarker', {
+                method: 'POST',
+                body: formData
+            });
+            let result = await response.json()
+            if('error' in result){
+                toast(result['error']);
+            } else {
+                toast(result['success']);
+                event.target.reset();
+                closeContainer();
+                loadView();
+            }
+        }
+
         //Just closes the pane and removes the marker that was initially put down when adding a marker. May be modified to also remove cancelled buildings.
         function cancelAdd(){
-            if(currentMarker != null){
+            if(currentMarker != null && currentMarker != undefined){
                 map.removeLayer(currentMarker);
             }
-            if(currentBuilding != null){
+            if(currentBuilding != null && currentBuilding != undefined){
                 drawnItems.removeLayer(currentBuilding);
             }
             closeContainer();
         }
 
         //Alot goes on here. 
-        function addObjects(){
-            {% for marker in markers %}
-                var newMarker = L.marker([{{marker.x}}, {{marker.y}}], {title: "{{marker.name}}"}).addTo(map); // Adds each marker to the map
+        function addObjects(markers, buildings, faculties){
+            for(marker of markers){
+                var newMarker = L.marker([marker['x'], marker['y']], {title: marker['name']}).addTo(map); // Adds each marker to the map
                 //The marker object attributes from the backend is basically just recreated here.
-                newMarker.id = {{marker.id}}
-                newMarker.name = "{{marker.name}}"
-                newMarker.floor = {{marker.floor}}
-                newMarker.description = "{{marker.description}}"
-                newMarker.facultyLong = {{marker.building.faculty.name|tojson}}
-                newMarker.building = "{{marker.building.name}}"
-                newMarker.image = "{{marker.image}}"
                 newMarker.on('click', onMarkerClick);
-                newMarker.bindTooltip("{{marker.name}}", {permanent: true, offset: [-15, 40], direction: "center", className: 'transparent-tooltip'});
+                newMarker.data = marker
+                newMarker.bindTooltip(marker['name'], {permanent: true, offset: [-15, 40], direction: "center", className: 'transparent-tooltip'});
                 var markerColorIcon;
 
                 // Add each marker to the layerGroup
                 markerLayer.addLayer(newMarker).addTo(map);
-                
                 //Dynamically change the color of the marker icon depending on the faculty.
-                switch("{{marker.building.faculty.abbr}}") {
+                switch(marker['facultyAbbr']) {
                     case "FST":
                         fst.addLayer(newMarker).addTo(map);
                         markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png"
@@ -455,20 +485,20 @@
                     tooltipAnchor: [16, -28]
                   });
                 newMarker.setIcon(newIcon);
-            {% endfor %}
+            }
 
             //Recreating pseudo-building objects from the backend.
-            {% for building in buildings %}
-                var name = "{{building.name}}";
-                var newDrawingCoords = JSON.parse({{building.drawingCoords|tojson}})
+            for(building of buildings){
+                var name = building['name'];
+                var newDrawingCoords = JSON.parse(building['drawingCoords'])
 
-                newDrawingCoords.properties["id"] = {{building.id}}
+                newDrawingCoords.properties["id"] = building['id']
                 newDrawingCoords.properties["name"] = name;
-                newDrawingCoords.properties["faculty"] = "{{building.faculty.abbr}}"
-                newDrawingCoords.properties["facultylong"] = "{{building.faculty.name}}"
-                newDrawingCoords.properties["image"] = "{{building.image}}"
+                newDrawingCoords.properties["faculty"] = building['facultyAbbr']
+                newDrawingCoords.properties["facultylong"] = building['facultyName']
+                newDrawingCoords.properties["image"] = building['image']
                 drawingLayer.addData(newDrawingCoords)
-            {% endfor %}
+            }
             
             //Dynamically color each building depending on the faculty
             drawingLayer.eachLayer(function(layer){
@@ -527,7 +557,7 @@
             currentBuilding = e.target.feature.properties
             pane = document.querySelector('#pane');
             let html = `
-    <div class="row" style="overflow-x: hidden;">
+    <div class="row" style="overflow-x: hidden;" id='editBuildingForm' name='editBuildingForm'>
         <div class="col s12">
             <div class="col s12" style="background-color: #d4edda;">
                 <p style="font-family: 'Pridi', cursive">Building Information</p>
@@ -570,6 +600,7 @@
             `;
             pane.innerHTML = html;
             pane.style.left = '10px';
+            document.getElementById('editBuildingForm').addEventListener('submit', editBuilding);
             var elems = document.querySelectorAll('.materialboxed');
             var instances = M.Materialbox.init(elems, {
                 onCloseEnd: function() {
@@ -581,6 +612,26 @@
                 }
             });
             removeUnhideButton(); // Remove unhide button
+        }
+
+        async function editBuilding(event){
+            event.preventDefault();
+            let form = event.target.elements;
+            let formData = new FormData(event.target);
+            let response = await fetch(`${event.target.action}`, {
+                method: 'POST',
+                body: formData
+            });
+
+            let result = await response.json()
+            if('error' in result){
+                toast(result['error']);
+            } else {
+                toast(result['success']);
+                closeContainer();
+                event.target.reset();
+                loadView();
+            }
         }
 
         //Brings up the edit form for buildings
@@ -597,17 +648,17 @@
                         <select name="facultyChoice" id="facultyChoice" style="display:static;">
                             
                     `;
-                    {% for faculty in faculties %}
-                        if("{{faculty.abbr}}" != currentBuilding.faculty){
+                    for(faculty of faculties){
+                        if(faculty['abbr'] != currentBuilding.faculty){
                             html += `
-                               <option value="{{faculty.id}}">{{faculty.abbr}} - {{faculty.name}}</option>
+                               <option value="${faculty['id']}">${faculty['abbr']} - ${faculty['name']}</option>
                             `
                         } else {
                             html += `
-                            <option value="{{faculty.id}}" selected>{{faculty.abbr}} - {{faculty.name}}</option>
+                            <option value="${faculty['id']}" selected>${faculty['abbr']} - ${faculty['name']}</option>
                             `
                         }
-                    {% endfor %}
+                    }
                     html += `
                         </select>
                     </div>
@@ -650,6 +701,28 @@
             removeUnhideButton(); // Remove unhide button
         }
 
+        async function addBuilding(event){
+            event.preventDefault();
+            let form = event.target.elements;
+            let formData = new FormData(event.target);
+            
+            let response = await fetch('/addBuilding', {
+                method: 'POST',
+                body: formData
+            });
+
+            let result = await response.json()
+
+            if('error' in result){
+                toast(result['error']);
+            } else {
+                toast(result['success']);
+                event.target.reset();
+                closeContainer();
+                loadView();
+            }
+        }
+
         function reDraw(){
             //Whenever a new drawing is made, "mode" is checked. If it is "redraw", then creating a drawing updates the currently 
             //selected building's drawing coordinates instead of bringing up the Add New Building form.
@@ -665,7 +738,6 @@
         }
         
         function onMarkerClick(e){
-            console.log(e.target.id);
             marker = e.target
             currentMarker = marker;
             let pane = document.querySelector('#pane');
@@ -676,21 +748,21 @@
             //The delete button is also here, but since a form can't send both a POST and a GET request to 2 differnet routes, the delete button just
             //calls a JS function thats sends a GET request to the deleteMarker route.
             let html = `
-    <div class="row">
+    <div class="row" id='editMarkerForm' name='editMarkerForm'>
         <div class="col s12">
         <div class ="col s12" style="background-color: #d4edda;">
 	        <p style="font-family: 'Pridi', cursive">Marker Information</p>
         </div>
-            <form method="POST" action="/editMarker/${marker.id}" enctype="multipart/form-data">
+            <form method="POST" action="/editMarker/${marker.data.id}" enctype="multipart/form-data">
             <div>`
             //Only add the image if one exists for the current marker
-            if(marker.image != ''){
+            if(marker.data.image != ''){
                 html += `
                 <div class="card-image">
                     <button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
                         <i class="material-icons">exit_to_app</i>
                     </button>
-                    <img class="materialboxed" src="${marker.image}" height="200" style="border-radius: 0; object-fit:cover; object-position: 20% 10%;">
+                    <img class="materialboxed" src="${marker.data.image}" height="200" style="border-radius: 0; object-fit:cover; object-position: 20% 10%;">
                 </div>
                 `
 
@@ -703,14 +775,14 @@
                 <div name="markerInfoForm" id="markerInfoForm" class="card-content">
                     <span class="card-title"></span>
                     <h6 style="font-family: 'Bungee Spice', cursive">Name</h6>
-                    <p style="font-family: 'Pridi', cursive">${marker.name}</p>
+                    <p style="font-family: 'Pridi', cursive">${marker.data.name}</p>
                     <h6 style="font-family: 'Bungee Spice', cursive">Building</h6>
-                    <p style="font-family: 'Pridi', cursive">${marker.building}</p>
+                    <p style="font-family: 'Pridi', cursive">${marker.data.buildingName}</p>
                     <h6 style="font-family: 'Bungee Spice', cursive">Floor Number</h6>
-                    <p style="font-family: 'Pridi', cursive">${marker.floor}</p>
+                    <p style="font-family: 'Pridi', cursive">${marker.data.floor}</p>
                     <h6 style="font-family: 'Bungee Spice', cursive">Description</h6>`
-                    if(marker.description != ''){
-                        html += `<p style="font-family: 'Pridi', cursive">${marker.description}</p>`
+                    if(marker.data.description != ''){
+                        html += `<p style="font-family: 'Pridi', cursive">${marker.data.description}</p>`
                     } else {
                         html += `<p style="font-family: 'Pridi', cursive">No description provided</p>`
                     }
@@ -718,7 +790,7 @@
                 html += `</div>
                 <div name="markerInfoFormButtons" id="markerInfoFormButtons" class="card-action" style="position:static;">
                     <input type="button" onclick="editMarkerView()" class="waves-effect waves-light orange btn" value="Edit" style="font-family: 'Pridi', cursive">
-                    <button type="button" onclick="deleteMarker(${marker.id})" class="waves-effect waves-light red btn right" style="font-family: 'Pridi', cursive">Delete</button>
+                    <button type="button" onclick="deleteMarker(${marker.data.id})" class="waves-effect waves-light red btn right" style="font-family: 'Pridi', cursive">Delete</button>
                 </div>
             </div>
             </form>
@@ -727,6 +799,7 @@
             `;
             pane.innerHTML = html;
             pane.style.left = '10px';
+            document.getElementById('editMarkerForm').addEventListener('submit', editMarker);
             // Initialize Materialboxed for the image
             var elems = document.querySelectorAll('.materialboxed');
             var instances = M.Materialbox.init(elems, {
@@ -741,19 +814,51 @@
             removeUnhideButton(); // Remove unhide button
         }
         
-        //"Manually" sends a GET request to /deleteMarker
-        function deleteMarker(id){
-            fetch(`/deleteMarker/${id}`).then(res => {
-                console.log(`Deleted marker from database`);
-                window.location.reload()
+        async function editMarker(event){
+            event.preventDefault();
+            let form = event.target.elements;
+            let formData = new FormData(event.target);
+            let response = await fetch(`${event.target.action}`, {
+                method: 'POST',
+                body: formData
             });
+
+            let result = await response.json()
+            if('error' in result){
+                toast(result['error']);
+            } else {
+                toast(result['success']);
+                closeContainer();
+                event.target.reset();
+                loadView();
+            }
+        }
+        
+        //"Manually" sends a GET request to /deleteMarker
+        async function deleteMarker(id){
+            let response = await fetch(`/deleteMarker/${id}`);
+
+            let result = await response.json()
+            if('error' in result){
+                toast(result['error']);
+            } else {
+                toast(result['success']);
+                closeContainer();
+                loadView();
+            }
         }
 
-        function deleteBuilding(id){
-            fetch(`/deleteBuilding/${id}`).then(res => {
-                console.log(`Deleted building from database`);
-                window.location.reload()
-            });
+        async function deleteBuilding(id){
+            let response = await fetch(`/deleteBuilding/${id}`);
+
+            let result = await response.json()
+            if('error' in result){
+                toast(result['error']);
+            } else {
+                toast(result['success']);
+                closeContainer();
+                loadView();
+            };
         }
 
         //If the edit button is clicked, then this function is what actually "makes" all the fields in the form editable and adds the real submit button
@@ -763,33 +868,33 @@
                 html = `
                     <div class="input-field col s12">
                         <label for="markerName" style="position:static;">Name</label>
-                        <input value="${currentMarker.name}" id="markerName" name="markerName" type="text" class="validate" required>
+                        <input value="${currentMarker.data.name}" id="markerName" name="markerName" type="text" class="validate" required>
                     </div>
                     <div class="input-field col s12">
                         <label for="floorNum" style="position:static;">Floor #</label>
-                        <input value="${currentMarker.floor}" id="floorNum" name="floorNum" type="number" min="0" step="1" class="validate" required>
+                        <input value="${currentMarker.data.floor}" id="floorNum" name="floorNum" type="number" min="0" step="1" class="validate" required>
                     </div>
                     <div class="input-field col s12">
                         <label for="buildingName" style="position:static;">Building Name</label>
                         <select name="buildingChoice" id="buildingChoice" style="display:static;">
                     `;
-                    {% for building in buildings %}
-                        if("{{building.name}}" != currentMarker.building){
+                    for(building of buildings){
+                        if(building['name'] != currentMarker.data.building){
                             html += `
-                               <option value="{{building.id}}">{{building.name}}</option>
+                               <option value="${building['id']}">${building['name']}</option>
                             `
                         } else {
                             html += `
-                               <option value="{{building.id}}" selected>{{building.name}}</option>
+                               <option value="${building['id']}" selected>${building['name']}</option>
                             `
                         }
-                    {% endfor %}
+                    }
                     html += `
                         </select>
                     </div>
                     <div class="input-field col s12">
                         <label for="description" style="position:static;">Description (Optional)</label>
-                        <textarea class="materialize-textarea" name="description" id="description" rows="4" cols="12">${currentMarker.description}</textarea>
+                        <textarea class="materialize-textarea" name="description" id="description" rows="4" cols="12">${currentMarker.data.description}</textarea>
                     </div>
                     <div class="input-field col s12">
                         <label for="coords" style="position:static;">Current coordinates</label>
@@ -815,14 +920,14 @@
                             <input type="file" name="imageUpload" id="imageUpload" accept="image/*">
                         </div>
                         <div class="file-path-wrapper">
-                            <input class="file-path validate" type="text" value="${currentMarker.image}">
+                            <input class="file-path validate" type="text" value="${currentMarker.data.image}">
                         </div>
                     </div> 
                 `;
                 infoPane.innerHTML = html;
                 currentMarker.dragging.enable();
                 currentMarker.on('dragend', function(){
-                    console.log(currentMarker);
+                    console.log("Marker dragged: " + currentMarker);
                     x = document.querySelector('#x');
                     y = document.querySelector('#y');
                     x.value = currentMarker.getLatLng().lat;
@@ -835,14 +940,11 @@
                 //This code replaces the button with the real button to actually submit the form
                 var buttons = document.querySelector('#markerInfoFormButtons');
                 if(buttons != undefined){
-                    console.log('y');
                     buttons.innerHTML = `
                       <button class="waves-effect waves-light orange btn" type="submit">Update Marker</button>
                       <input class="waves-effect waves-light white btn black-text" type="button" value="Cancel" onclick="closeContainer(${currentMarker.getLatLng().lat}, ${currentMarker.getLatLng().lng})">    
                       <button class="waves-effect waves-light blue btn" type="button" onclick="hideInformation()">Hide Information</button>
                     `;
-                } else {
-                    console.log("n")
                 }
             }
             removeUnhideButton(); // Remove unhide button
@@ -854,8 +956,11 @@
             let pane = document.querySelector('#pane');
             pane.innerHTML = '';
             pane.style.left = '-300px';
-            if(currentMarker != null){ //Disables dragging on the current marker if it was enabled before.
-                currentMarker.dragging.disable();
+            console.log("CurrentMarker" + currentMarker)
+            if(currentMarker){ //Disables dragging on the current marker if it was enabled before.
+                if(currentMarker.dragging){
+                    currentMarker.dragging.disable();
+                }
                 if(oldLat != null && oldLng != null){
                     currentMarker.setLatLng([oldLat, oldLng]);
                 }
@@ -926,8 +1031,6 @@
 
         //Custom filter function as the default does not do what we need.
         function filterMarkers(filterName, mode){
-            console.log(filterSelectedFaculties)
-            console.log(filterSelectedFloors)
             markerLayer.eachLayer(function(layer){ //For each marker
                 if(mode == "add"){ 
                     if(filterName.includes("Faculty")){ //If mode == "add", add the faculty to the selectedFaculties list if it is a faculty
@@ -956,22 +1059,17 @@
             //These grab the 2 'select all' checkboxes for Floors and Faculties
             let floorHeader = getHeaderCheckboxByLabel("Floors");
             let facultiesHeader = getHeaderCheckboxByLabel("Faculties");
-            console.log("Faculties size: " + filterSelectedFaculties.size)
             if(filterSelectedFaculties.size < 10){ //If every faculty is not currently ticked, untick the select all box
                 facultiesHeader.checked = false;
             } else {
                 facultiesHeader.checked = true; //Otherwise tick it
             }
 
-            console.log("Faculties size: " + filterSelectedFloors.size)
             if(filterSelectedFloors.size < 7){ //Likewise for floors
                 floorHeader.checked = false;
             } else {
                 floorHeader.checked = true;
             }
-
-            console.log(filterSelectedFaculties)
-            console.log(filterSelectedFloors)
         }
 
         //By default the plugin for the filters does not actually do what is needed. It doesn't stack filters ontop of each other
@@ -1016,9 +1114,9 @@
                             facultiesCheckbox.checked = toggleToChecked;
                         });
                         filterSelectedFaculties.clear()
-                        let faculties = facultyLayers[0].children
+                        let filterFaculties = facultyLayers[0].children
                         if(checkbox.checked == true){
-                            for(let faculty of faculties){
+                            for(let faculty of filterFaculties){
                                 filterSelectedFaculties.add(faculty['label']);
                             }
                         }

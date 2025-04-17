@@ -28,3 +28,18 @@ class Marker(db.Model):
             'x': self.x,
             'y': self.y
         }
+
+    def to_dict(self):
+        return {
+            'id' : self.id,
+            'x' : self.x,
+            'y' : self.y,
+            'name' : self.name,
+            'floor' : self.floor,
+            'buildingID' : self.buildingID,
+            'image' : self.image,
+            'description' : self.description,
+            'buildingName' : self.building.name,
+            'facultyName' : self.building.faculty.name,
+            'facultyAbbr' : self.building.faculty.abbr
+        }

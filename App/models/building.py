@@ -55,3 +55,16 @@ class Building(db.Model):
             db.session.rollback()
             return False
         return marker
+    
+    def to_dict(self):
+        return {
+            'id' : self.id,
+            'name' : self.name,
+            'drawingCoords' : self.drawingCoords,
+            'markers' : self.markers,
+            'facultyID' : self.facultyID,
+            'image' : self.image,
+            'facultyName' : self.faculty.name,
+            'facultyAbbr' : self.faculty.abbr,
+            'markers': [marker.to_dict() for marker in self.markers]
+        }

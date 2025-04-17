@@ -10,6 +10,9 @@ def create_building(name, facultyID, drawingCoords):
     except IntegrityError as e:
         db.session.rollback()
         return False
+    except Exception as e:
+        db.session.rollback()
+        return False
     return newBuilding
 
 def get_building(name):

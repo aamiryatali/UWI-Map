@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from App.controllers import create_user, initialize, create_building, get_marker, get_building
 from App.models import db, Marker, Building, Faculty
 from werkzeug.utils import secure_filename
+from werkzeug.exceptions import HTTPException
 import os
 import json
 
@@ -24,7 +25,12 @@ def upload_file(imageFile):
         imageFile.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
         return filename
         
-        
+@index_views.errorhandler(Exception)
+def page_not_found(error):
+    if isinstance(error, HTTPException):
+        return jsonify({'error': f'{error}'}), 500
+    return jsonify({'error': f'{error}'}), 500
+
 @index_views.route('/', methods=['GET'])
 def index_page():
     markers = Marker.query.all()
@@ -32,6 +38,18 @@ def index_page():
     faculties = Faculty.query.all()
     return render_template('index.html', markers=markers, buildings=buildings, faculties=faculties)
 
+@index_views.route('/get-data', methods=['GET'])
+def get_data():
+    markers = Marker.query.all()
+    buildings = Building.query.all()
+    faculties = Faculty.query.all()
+    return jsonify({
+        'markers' : [marker.to_dict() for marker in markers],
+        'buildings' : [building.to_dict() for building in buildings],
+        'faculties' : [faculty.to_dict() for faculty in faculties]
+    })
+
+    
 @index_views.route('/init', methods=['GET'])
 def init():
     if os.environ.get("ENV") == "PRODUCTION":
@@ -54,12 +72,10 @@ def health_check():
 def add_marker():
     data = request.form
     if get_marker(data['markerName']):
-        flash('Marker name already exists!')
-        return redirect(request.referrer)
+        return jsonify({'error': "Marker name already exists!"}), 400
     
     #Get the image file
     imageFile = request.files['imageUpload']
-        
     building = Building.query.get(data['buildingChoice'])
     if building:
         marker = building.addMarker(x=data['x'], y=data['y'], name=data['markerName'], floor=int(data['floorNum']), description=data['description'])
@@ -68,21 +84,18 @@ def add_marker():
                 secureFilename = upload_file(imageFile)
                 if secureFilename:
                     marker.addImage("static/images/" + secureFilename)
-            flash(f'Successfully added {data["markerName"]} to {building.name}')
+            return jsonify({'success': 'Marker successfully added!'}), 200
         else:
-            flash("Could not add marker to building")
-    else:
-        flash("Building does not exist")
-    return redirect(request.referrer)
+            return jsonify({'error': 'Could not add marker to building!'}), 400
+    return jsonify({'error': 'Building does not exist!'}), 400
 
 @index_views.route('/editMarker/<id>', methods=['POST'])
 def edit_marker(id):
     marker = Marker.query.get(id)
-    imageFile = request.files['imageUpload']
-    
     if not marker:
-        flash("Could not find marker")
-        return redirect(request.referrer)
+        return jsonify({'error': "Could not find marker"}), 400
+    
+    imageFile = request.files['imageUpload']
     data = request.form
     #This could probably be moved to a model function
     marker.name = data['markerName']
@@ -100,26 +113,27 @@ def edit_marker(id):
         db.session.commit()
     except IntegrityError as e:
         db.session.rollback()
-        flash('Marker name already exists!')
-    return redirect(request.referrer)
+        return jsonify({'error': "Marker name already exists!"}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': "Unable to edit marker"}), 400
+    return jsonify({'success' : "Marker information updated!"}), 200
     
 @index_views.route('/deleteMarker/<id>')
 def delete_marker(id):
     #This could also probably be moved to a model function
     marker = Marker.query.get(id)
     if not marker:
-        flash("Could not find marker")
-        return redirect(request.referrer)
+        return jsonify({'error': "Marker does not exist"}), 400
     db.session.delete(marker)
     db.session.commit()
-    return redirect(request.referrer)
+    return jsonify({'success' : "Marker information updated!"}), 200
 
 @index_views.route('/addBuilding', methods=['POST'])
 def addBuilding():
     data = request.form
     if get_building(data['buildingName']):
-        flash('Building name already exists!')
-        return redirect(request.referrer)
+        return jsonify({'error': 'Building name already exists!'}), 400
     
     #Get the image file
     imageFile = request.files['imageUpload']
@@ -129,26 +143,22 @@ def addBuilding():
     print(json.dumps(data['geoJSON']))
     building = create_building(data['buildingName'], data['facultyChoice'], data['geoJSON'])
     if not building:
-        flash("Could not create building")
-        return redirect(request.referrer)
+        return jsonify({'error': 'Could not create building'}), 400
     else:
         if imageFile:
             secureFilename = upload_file(imageFile)
             if secureFilename:
                 building.addImage("static/images/" + secureFilename)
-        flash(f'Successfully added building: {data["buildingName"]}')
-    return redirect(request.referrer)
+    return jsonify({'success': 'Building successfully added'}), 200
 
 @index_views.route('/editBuilding/<id>', methods=['POST'])
 def editBuilding(id):
     building = Building.query.get(id)
     if not building:
-        flash('Building not found')
-        return redirect(request.referrer)
+        return jsonify({'error' : 'Building not found'}), 400
     
     data = request.form
     imageFile = request.files['imageUpload']
-    print(data)
     building.name = data['buildingName']
     building.facultyID = data['facultyChoice']
     if data['newDrawingCoords'] != "":
@@ -156,14 +166,16 @@ def editBuilding(id):
     if imageFile:
             secureFilename = upload_file(imageFile)
             building.addImage("static/images/" + secureFilename)
-        
     try:
         db.session.add(building)
         db.session.commit()
     except IntegrityError as e:
         db.session.rollback()
-        flash("Building name already exists!")
-    return redirect(request.referrer)
+        return jsonify({'error' : 'Building name already exists'}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error' : 'Could not edit building'}), 400
+    return jsonify({'success' : 'Building information updated'}), 200
     
 @index_views.route('/deleteBuilding/<id>')
 def deleteBuilding(id):
@@ -171,18 +183,16 @@ def deleteBuilding(id):
     building = Building.query.get(id)
     default = Building.query.get(1)
     if not building:
-        flash("Could not find building")
-        return redirect(request.referrer)
+        return jsonify({'error' : 'Building does not exist'}), 400
     for marker in building.markers:
         default.addMarker(marker.x, marker.y, marker.name, marker.floor, marker.description)
-        print("HIIHIHIHIHIHIHIHIHIHI")
         print(f'${marker.name} + ${marker.buildingID}')
         marker.buildingID = 1
         print(f'${marker.name} + ${marker.buildingID}')
         db.session.add(marker)
     db.session.delete(building)
     db.session.commit()
-    return redirect(request.referrer)
+    return jsonify({'success': 'Building successfully deleted'}), 200
     
 
 
