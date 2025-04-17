@@ -46,6 +46,10 @@
             font-size: 1em;
             color: #333;
         }
+
+        .leaflet-draw-toolbar {
+            margin-top: 0.6em;
+        }
     </style>
     <script type="text/javascript">
         var map = L.map('map').setView([10.642529, -61.400225], 13); // Sets the initial map position and zoom level
@@ -347,6 +351,7 @@
                 var elems = document.querySelectorAll('select');
                 var instances = M.FormSelect.init(elems);
             }
+            removeUnhideButton(); // Remove unhide button
         });
 
         // Move zoom controls under the layer control toggle, with some CSS styling done in <style>
@@ -524,7 +529,7 @@
             let html = `
     <div class="row" style="overflow-x: hidden;">
         <div class="col s12">
-            <div class="col s12" style="background-color: #d4edda; margin-bottom: 1em;">
+            <div class="col s12" style="background-color: #d4edda;">
                 <p style="font-family: 'Pridi', cursive">Building Information</p>
                 <button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
                     <i class="material-icons">exit_to_app</i>
@@ -575,7 +580,7 @@
                     }
                 }
             });
-
+            removeUnhideButton(); // Remove unhide button
         }
 
         //Brings up the edit form for buildings
@@ -634,13 +639,15 @@
 
                 //This code replaces the button with the real button to actually submit the form
                 var buttons = document.querySelector('#buildingInfoFormButtons');
-                if(buttons != undefined){
+                if (buttons != undefined) {
                     buttons.innerHTML = `
                       <button class="waves-effect waves-light orange btn" type="submit">Update Building</button>
                       <input class="waves-effect waves-light white btn black-text" type="button" value="Cancel" onclick="closeContainer()">    
+                      <button class="waves-effect waves-light blue btn" type="button" onclick="hideInformation()">Hide Information</button>
                     `;
                 }
             }
+            removeUnhideButton(); // Remove unhide button
         }
 
         function reDraw(){
@@ -731,7 +738,7 @@
                     }
                 }
             });
-            
+            removeUnhideButton(); // Remove unhide button
         }
         
         //"Manually" sends a GET request to /deleteMarker
@@ -832,11 +839,13 @@
                     buttons.innerHTML = `
                       <button class="waves-effect waves-light orange btn" type="submit">Update Marker</button>
                       <input class="waves-effect waves-light white btn black-text" type="button" value="Cancel" onclick="closeContainer(${currentMarker.getLatLng().lat}, ${currentMarker.getLatLng().lng})">    
+                      <button class="waves-effect waves-light blue btn" type="button" onclick="hideInformation()">Hide Information</button>
                     `;
                 } else {
                     console.log("n")
                 }
             }
+            removeUnhideButton(); // Remove unhide button
         }
 
         //This function sort of servers a double purpose right now. It closes the info pane, but in the case of cancelling a marker addition/edit, it also
@@ -880,5 +889,39 @@
         }).addTo(map);*/
         // Prevent scrolling
         document.body.style.overflow = 'hidden';
+
+        // Add the unhide button to the document body
+        var unhideButton = document.createElement('button');
+        unhideButton.innerHTML = 'Unhide Information';
+        unhideButton.className = 'waves-effect waves-light green btn';
+        unhideButton.style.position = 'fixed';
+        unhideButton.style.bottom = '10px';
+        unhideButton.style.left = '-300px'; // Initially hidden
+        unhideButton.style.zIndex = '1500';
+        unhideButton.onclick = unhideInformation;
+        document.body.appendChild(unhideButton);
+
+        // Function to hide the information panel
+        function hideInformation() {
+            let pane = document.querySelector('#pane');
+            if (pane) {
+                pane.style.left = '-300px';
+                unhideButton.style.left = '10px'; // Show the unhide button
+            }
+        }
+
+        // Function to unhide the information panel
+        function unhideInformation() {
+            let pane = document.querySelector('#pane');
+            if (pane) {
+                pane.style.left = '10px';
+                unhideButton.style.left = '-300px'; // Hide the unhide button
+            }
+        }
+
+        // Function to remove the unhide button
+        function removeUnhideButton() {
+            unhideButton.style.left = '-300px'; // Hide the unhide button
+        }
     </script>
 {% endblock %}

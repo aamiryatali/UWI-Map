@@ -1,17 +1,14 @@
 <!doctype html>
 <html>
   <head>
-  
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-     <!--Import Google Icon Font-->
+    <!--Import Google Icon Font-->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!-- Compiled and minified CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet.locatecontrol/dist/L.Control.Locate.min.css" />
-    <!--Let browser know website is optimized for mobile-->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-    crossorigin=""/>
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/0.4.2/leaflet.draw.css"/>
     <link rel="stylesheet" href="https://unpkg.com/leaflet.control.layers.tree/L.Control.Layers.Tree.css" />
 
@@ -20,65 +17,38 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script src="https://unpkg.com/leaflet.locatecontrol/dist/L.Control.Locate.min.js"></script>
     <script src="https://unpkg.com/leaflet.control.layers.tree/L.Control.Layers.Tree.js"></script>
-    
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>{% block title %}{% endblock %}</title>
-
   </head>
   <body>
-    
-      <nav class="purple">
-          <div class="nav-wrapper">
-              <a href="#!" class="brand-logo center">{% block page %}{% endblock %}</a>
-              <ul id="nav-mobile" class="left">
-                  <li><a href="/">Home</a></li>
-                  <li><a href="/users">Users Jinja</a></li>
-                  {% if is_authenticated %}
-                    <li><a href="/identify">Identify</a></li>
-                  {% endif %}
-                  <li><a href="/static/users">Users JS</a></li>
-              </ul>
-              {% if is_authenticated %}
-              <ul id="nav-mobile" class="right">
-                <li><a href="/logout">Logout</a></li>
-              </ul>
-              {% else %}
-              <form class="right navbar-form" method="POST" action="/login" style="display: flex; flex-wrap: nowrap; align-items: center; margin-right: 10px;">
-                  <div class="input-field" style="margin-right: 10px;">
-                      <input placeholder="username" value="bob" name="username" type="text" class="validate" required>
-                      <label for="username">username</label>
-                  </div>
-                  <div class="input-field" style="margin-right: 10px;">
-                      <input placeholder="password"value="bobpass" name="password" type="password" class="validate" required>
-                      <label for="password">Password</label>
-                  </div>
-                  <button type="submit" class="btn waves-effect waves-light">Login</button>
-              </form>
-              {% endif %}
-              
-          </div>
-      </nav>
-      <style>
-          .navbar-form label {
-              color: white !important;
-          }
+    {% if not is_authenticated %}
+    <form class="right navbar-form" method="POST" action="/login" style="position: fixed; top: 10px; right: 20px; display: flex; flex-wrap: nowrap; align-items: center; z-index: 1500;">
+        <div class="input-field" style="margin-right: 10px; display: none;">
+            <input placeholder="username" value="bob" name="username" type="text" class="validate" required>
+            <label for="username" style="font-family: Arial, sans-serif !important;">username</label>
+        </div>
+        <div class="input-field" style="margin-right: 10px; display: none;">
+            <input placeholder="password" value="bobpass" name="password" type="password" class="validate" required>
+            <label for="password" style="font-family: Arial, sans-serif !important;">Password</label>
+        </div>
+        <button type="submit" class="btn waves-effect waves-light">Login</button>
+    </form>
+    {% endif %}
 
-          .navbar{
-            opacity: 10%;
-          }
-
-          #map {
+    <style>
+        #map {
             height: 60vh;
             width: 60vw;
-          }
+        }
 
-          p{
+        p {
             left: 80vw;
             bottom: 50vh;
             z-index: 1000;
-          }
+        }
 
-          .transparent-tooltip {
+        .transparent-tooltip {
             color: white;
             background: none;
             font-weight: bold;
@@ -86,52 +56,48 @@
             border: none;
             box-shadow: none;
             text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-          }
-          .transparent-tooltip-building {
+        }
+
+        .transparent-tooltip-building {
             color: black;
             font-weight: bold;
             font-size: 12px;
             border: none;
             background: none;
             box-shadow: none;
-          }
+        }
 
-          .leaflet-draw-toolbar {
-            margin-bottom: 3.3em;
+        .leaflet-draw-toolbar {
+            margin-bottom: 2.6em;
             margin-right: 0.3em;
             border: none;
-            font-size: 18px; 
-            background-clip: border-box;    
+            font-size: 18px;
+            background-clip: border-box;
             transform: scale(1.5);
-          }
+        }
 
-          .leaflet-control-zoom {
+        .leaflet-control-zoom {
             transform: scale(1.5);
-            bottom: 3em;
+            bottom: 2em;
             right: 0.5em;
-          }
+        }
 
-          .leaflet-control-locate {
+        .leaflet-control-locate {
             transform: scale(1.5);
-            bottom: 8.5em;
+            bottom: 2.2em;
             right: 0.5em;
-          }
+        }
 
-          .leaflet-control-layers{
+        .leaflet-control-layers {
             transform: scale(1.05);
-            bottom: -1.3em;
+            bottom: 2.6em;
             left: 0.1em;
-          }
-
-          
-      </style>
+        }
+    </style>
 
     <div id="content">{% block content %}{% endblock %}</div>
-
-
     <script>
-       M.AutoInit();
-
+        M.AutoInit();
         {% with messages = get_flashed_messages() %}
           {% if messages %}
               {% for message in messages %}
@@ -139,11 +105,7 @@
               {% endfor %}
           {% endif %}
         {% endwith %}
-       
     </script>
-
-    
-    
     {% block code %} {% endblock %}
   </body>
 </html>
