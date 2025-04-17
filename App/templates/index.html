@@ -521,6 +521,59 @@
             });
         }
 
+        //Prepare and sort marker names
+        const markerNames = {};
+        const namesArray = [];
+
+        markerLayer.eachLayer(layer => {
+            namesArray.push(layer.name);
+        });
+
+        //Sort alphabetically
+        namesArray.sort((a, b) => a.localeCompare(b));
+
+        //Build autocomplete data object
+        namesArray.forEach(name => {
+            markerNames[name] = null;
+        });
+
+        //Initialize Autocomplete with BOTH input and onAutocomplete handlers
+        const searchInput = document.getElementById('marker-search');
+        const autocompleteInstance = M.Autocomplete.init(searchInput, {
+            data: markerNames,
+            minLength: 0,
+            limit:5,
+            onAutocomplete: function(selectedName) {
+                filterMarkersByName(selectedName); // Ensure this handles selection
+            }
+        });
+
+        //Live filtering on input
+        searchInput.addEventListener('input', function () {
+            const query = this.value.trim().toLowerCase();
+            filterMarkersByName(query);
+        });
+
+        //Filtering logic (shared between input and selection)
+        function filterMarkersByName(query) {
+            if (!query) {
+                //If input is empty, show all markers
+                markerLayer.eachLayer(layer => {
+                    if (!map.hasLayer(layer)) map.addLayer(layer);
+                });
+                return;
+            }
+
+            markerLayer.eachLayer(function(layer) {
+                const markerName = layer.name.toLowerCase();
+                if (markerName.includes(query)) {
+                    if (!map.hasLayer(layer)) map.addLayer(layer);
+                } else {
+                    if (map.hasLayer(layer)) map.removeLayer(layer);
+                }
+            });
+        }
+
         // Brings up the building info pane on double click
         function onBuildingClick(e) {
             currentBuilding = e.target.feature.properties; // Ensure currentBuilding is set correctly
