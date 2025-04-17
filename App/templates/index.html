@@ -551,11 +551,79 @@
             });
         }
 
-        //Brings up the building info pane on double click
-        function onBuildingClick(e){
-            building = e.target.feature.properties
-            currentBuilding = e.target.feature.properties
-            pane = document.querySelector('#pane');
+        //Prepare and sort marker names
+        const markerNames = {};
+        const namesArray = [];
+
+        markerLayer.eachLayer(function(layer) {
+            namesArray.push(layer.name);
+        });
+
+        //Sort alphabetically
+        namesArray.sort((a, b) => a.localeCompare(b));
+
+        //Build autocomplete data object
+        namesArray.forEach(function(name) {
+            markerNames[name] = null;
+        });
+
+        //Initialize Autocomplete with BOTH input and onAutocomplete handlers
+        const searchInput = document.getElementById('marker-search');
+        const autocompleteInstance = M.Autocomplete.init(searchInput, {
+            data: markerNames,
+            minLength: 0,
+            limit:3,
+            onAutocomplete: function(selectedName) {
+                filterMarkersByName(selectedName); // Ensure this handles selection
+            }
+        });
+
+        //Live filtering on input
+        searchInput.addEventListener('input', function () {
+            const query = this.value.trim().toLowerCase();
+            filterMarkersByName(query);
+        });
+
+        //Filtering logic (shared between input and selection)
+        function filterMarkersByName(query) {
+            if (!query) {
+                //If input is empty, show all markers
+                markerLayer.eachLayer(function(layer) {
+                    if (!map.hasLayer(layer)) map.addLayer(layer);
+                });
+                return;
+            }
+
+            markerLayer.eachLayer(function(layer) {
+                const markerName = layer.name.toLowerCase();
+                if (markerName.includes(query)) {
+                    if (!map.hasLayer(layer)) map.addLayer(layer);
+
+                    //If exact match, center and zoom
+                    if (markerName === query) {
+                        map.setView(layer.getLatLng(), 18);
+                        foundMatch = true;
+                    }
+
+                } else {
+                    if (map.hasLayer(layer)) map.removeLayer(layer);
+                }
+            });
+        }
+
+        //Clears search input
+        const clearBtn = document.getElementById('clear-search');
+
+        clearBtn.addEventListener('click', function () {
+            searchInput.value = '';
+            filterMarkersByName(''); //Reshow all markers
+        });
+
+        // Brings up the building info pane on double click
+        function onBuildingClick(e) {
+            currentBuilding = e.target.feature.properties; // Ensure currentBuilding is set correctly
+            let pane = document.querySelector('#pane');
+            let building = currentBuilding; // Use currentBuilding for consistency
             let html = `
     <div class="row" style="overflow-x: hidden;" id='editBuildingForm' name='editBuildingForm'>
         <div class="col s12">
@@ -567,23 +635,16 @@
             </div>
             <form method="POST" enctype="multipart/form-data" action="/editBuilding/${building.id}">
             <div>`;
-                if(building.image != ''){
-                    html += `
-                    <div class="card-image">
-                        <button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
-                            <i class="material-icons">exit_to_app</i>
-                        </button>
-                        <img class="materialboxed" src="${building.image}" height="200" style="border-radius: 0; object-fit:cover; object-position: 20% 10%;">
-                    </div>
-                    `;
-                } else {
-                    html += `<button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
-                                <i class="material-icons">exit_to_app</i>
-                             </button>`
-                }
+            if (building.image != '') {
                 html += `
+                <div class="card-image">
+                    <img class="materialboxed" src="${building.image}" height="200" style="border-radius: 0; object-fit:cover; object-position: 20% 10%;">
+                </div>`;
+            } else {
+                html += `<div style="margin-top: 2.5em;"></div>`;
+            }
+            html += `
                 <div name="buildingInfoForm" id="buildingInfoForm" class="card-content">
-                    <span class="card-title"></span>
                     <h6 style="font-family: 'Bungee Spice', cursive">Name</h6>
                     <p style="font-family: 'Pridi', cursive">${building.name}</p>
                     <h6 style="font-family: 'Bungee Spice', cursive">Faculty</h6>
@@ -596,42 +657,16 @@
             </div>
             </form>
         </div>
-    </div>
-            `;
+    </div>`;
             pane.innerHTML = html;
             pane.style.left = '10px';
+
+            
             document.getElementById('editBuildingForm').addEventListener('submit', editBuilding);
+            // Initialize Materialboxed for the image
             var elems = document.querySelectorAll('.materialboxed');
-            var instances = M.Materialbox.init(elems, {
-                onCloseEnd: function() {
-                    // Reinitialize scrollable behavior for marker popup and edit panel
-                    let pane = document.querySelector('#pane');
-                    if (pane) {
-                        pane.style.overflow = 'auto';
-                    }
-                }
-            });
+            var instances = M.Materialbox.init(elems);
             removeUnhideButton(); // Remove unhide button
-        }
-
-        async function editBuilding(event){
-            event.preventDefault();
-            let form = event.target.elements;
-            let formData = new FormData(event.target);
-            let response = await fetch(`${event.target.action}`, {
-                method: 'POST',
-                body: formData
-            });
-
-            let result = await response.json()
-            if('error' in result){
-                toast(result['error']);
-            } else {
-                toast(result['success']);
-                closeContainer();
-                event.target.reset();
-                loadView();
-            }
         }
 
         //Brings up the edit form for buildings
@@ -769,7 +804,8 @@
             } else {
                 html += `<button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
                             <i class="material-icons">exit_to_app</i>
-                         </button>`
+                         </button>
+                         <div style="margin-top: 2.5em;"></div>`
             }
             html += `
                 <div name="markerInfoForm" id="markerInfoForm" class="card-content">
@@ -1028,6 +1064,36 @@
         function removeUnhideButton() {
             unhideButton.style.left = '-300px'; // Hide the unhide button
         }
+
+        // Add swipe functionality for the pane
+        let touchStartX, touchEndX;
+        const pane = document.querySelector('#pane');
+
+        pane.addEventListener('touchstart', e => {
+            // Restrict swipe to ribbon or text, ignore buttons, input fields, materialboxed elements, and their overlays
+            if (e.target.tagName === 'BUTTON' || 
+                e.target.tagName === 'INPUT' || 
+                e.target.tagName === 'TEXTAREA' || 
+                e.target.tagName === 'SELECT' || 
+                e.target.closest('.materialboxed') || 
+                e.target.closest('.materialbox-overlay')) {
+                return;
+            }
+            touchStartX = e.targetTouches[0].clientX;
+        });
+
+        pane.addEventListener('touchmove', e => {
+            if (touchStartX !== undefined) {
+                touchEndX = e.targetTouches[0].clientX;
+            }
+        });
+
+        pane.addEventListener('touchend', () => {
+            if (touchStartX !== undefined && touchStartX - touchEndX > 45) { // Swipe left to close
+                closeContainer();
+            }
+            touchStartX = undefined; // Reset touchStartX
+        });
 
         //Custom filter function as the default does not do what we need.
         function filterMarkers(filterName, mode){
