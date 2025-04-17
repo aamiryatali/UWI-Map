@@ -525,7 +525,7 @@
         const markerNames = {};
         const namesArray = [];
 
-        markerLayer.eachLayer(layer => {
+        markerLayer.eachLayer(function(layer) {
             namesArray.push(layer.name);
         });
 
@@ -533,7 +533,7 @@
         namesArray.sort((a, b) => a.localeCompare(b));
 
         //Build autocomplete data object
-        namesArray.forEach(name => {
+        namesArray.forEach(function(name) {
             markerNames[name] = null;
         });
 
@@ -558,7 +558,7 @@
         function filterMarkersByName(query) {
             if (!query) {
                 //If input is empty, show all markers
-                markerLayer.eachLayer(layer => {
+                markerLayer.eachLayer(function(layer) {
                     if (!map.hasLayer(layer)) map.addLayer(layer);
                 });
                 return;
@@ -573,6 +573,14 @@
                 }
             });
         }
+
+        //Clears search input
+        const clearBtn = document.getElementById('clear-search');
+
+        clearBtn.addEventListener('click', function () {
+            searchInput.value = '';
+            filterMarkersByName(''); //Reshow all markers
+        });
 
         // Brings up the building info pane on double click
         function onBuildingClick(e) {
