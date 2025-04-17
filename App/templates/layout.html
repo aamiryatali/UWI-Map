@@ -17,7 +17,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script src="https://unpkg.com/leaflet.locatecontrol/dist/L.Control.Locate.min.js"></script>
     <script src="https://unpkg.com/leaflet.control.layers.tree/L.Control.Layers.Tree.js"></script>
-
+    
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>{% block title %}{% endblock %}</title>
   </head>
@@ -92,8 +92,31 @@
             transform: scale(1.05);
             bottom: 2.6em;
             left: 0.1em;
-        }
-    </style>
+          }
+
+          .leaflet-layerstree-opened{
+            font-size: 30px;
+            margin-right: 5px;
+          }
+
+          .leaflet-layerstree-closed{
+            font-size: 30px;
+            margin-right: 5px;
+          }
+          
+          .leaflet-layerstree-header-name{
+            font-size: 15px;
+          }
+
+          .leaflet-control-layers {
+            pointer-events: auto;
+          }
+          
+          .leaflet-control-layers:not(.leaflet-control-layers-expanded) .leaflet-control-layers-list {
+            display: none;
+          }
+
+      </style>
 
     <div id="content">{% block content %}{% endblock %}</div>
     <script>

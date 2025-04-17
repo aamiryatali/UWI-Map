@@ -1,5 +1,6 @@
 from App.database import db
 from .marker import Marker
+from sqlalchemy.exc import IntegrityError
 
 class Building(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -43,7 +44,14 @@ class Building(db.Model):
             db.session.rollback()
             return False
 
-        self.markers.append(marker)
-        db.session.add(marker)
-        db.session.commit()
+        try:
+            self.markers.append(marker)
+            db.session.add(marker)
+            db.session.commit()
+        except IntegrityError as e:
+            db.session.rollback()
+            return False
+        except Exception as e:
+            db.session.rollback()
+            return False
         return marker

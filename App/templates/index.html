@@ -53,7 +53,7 @@
     </style>
     <script type="text/javascript">
         var map = L.map('map').setView([10.642529, -61.400225], 13); // Sets the initial map position and zoom level
-
+        
         var drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
 
@@ -85,6 +85,7 @@
         var currentBuilding;
         var previousDrawing = null;
         var drawingLayer = L.geoJSON().addTo(map)
+        var markerLayer = L.layerGroup();
 
         var eng = L.layerGroup();
         var fst = L.layerGroup();
@@ -105,9 +106,8 @@
         var f5 = L.layerGroup();
         var f6 = L.layerGroup();
 
-        var eeweweLayers = {  // Filter categories
-            
-        };
+        const floors = [f0, f1, f2, f3, f4, f5, f6]
+        const faculties = [eng, fst, fhe, fol, ffa, fss, fms, fsp, admin, other]
 
         var facultyLayers = [
             {
@@ -193,8 +193,32 @@
                 ]
             }
         ]
-        var layerControl = L.control.layers.tree(null, facultyLayers, { position: 'bottomright', collapsed: true }).addTo(map);
-        
+        //Adds the filter button
+        var layerControl = L.control.layers.tree(null, facultyLayers, { position: 'bottomright', collapsed: true}).addTo(map);
+
+        //These 2 sets will hold the currently selected filters to implement our custom filter functionality
+        var filterSelectedFaculties = new Set();
+        var filterSelectedFloors = new Set();
+
+        //Check all filter checkboxes and select all filters by default.
+        for(let f of floors){
+            f.addTo(map);
+            filterSelectedFloors.add(f)
+        }
+        for(let fac of faculties){
+            fac.addTo(map);
+            filterSelectedFaculties.add(fac)
+        }
+
+        //By default the filter button opens and closes when you hover in/out of the button. It's super annoying, so we just disabled it completely
+        //by basically killing the event when it triggers.
+        var control = document.querySelector('.leaflet-control-layers');
+        ['mouseover', 'mouseenter', 'mouseout', 'mouseleave'].forEach(eventName => {
+            control.addEventListener(eventName, function (e) {
+              e.stopImmediatePropagation();
+            }, true);
+        });
+
         map.doubleClickZoom.disable();
         map.addControl(drawControl);
         map.on('load', addObjects()); // Call the addMarkers() function when the map loads
@@ -377,40 +401,16 @@
                 newMarker.name = "{{marker.name}}"
                 newMarker.floor = {{marker.floor}}
                 newMarker.description = "{{marker.description}}"
+                newMarker.facultyLong = {{marker.building.faculty.name|tojson}}
                 newMarker.building = "{{marker.building.name}}"
                 newMarker.image = "{{marker.image}}"
                 newMarker.on('click', onMarkerClick);
-             // Add each marker to the layerGroup
                 newMarker.bindTooltip("{{marker.name}}", {permanent: true, offset: [-15, 40], direction: "center", className: 'transparent-tooltip'});
                 var markerColorIcon;
 
-                switch(newMarker.floor){
-                    case 0:
-                        f0.addLayer(newMarker).addTo(map);;
-                        break;
-                    case 1:
-                        f1.addLayer(newMarker).addTo(map);;
-                        break;
-                    case 2:
-                        f2.addLayer(newMarker).addTo(map);;
-                        break;
-                    case 3:
-                        f3.addLayer(newMarker).addTo(map);;
-                        break;
-                    case 4:
-                        f4.addLayer(newMarker).addTo(map);;
-                        break;
-                    case 5:
-                        f5.addLayer(newMarker).addTo(map);;
-                        break;
-                    case 6:
-                        f6.addLayer(newMarker).addTo(map);;
-                        break;
-                    default:
-                        f0.addLayer(newMarker).addTo(map);;
-                        break;
-                }
-
+                // Add each marker to the layerGroup
+                markerLayer.addLayer(newMarker).addTo(map);
+                
                 //Dynamically change the color of the marker icon depending on the faculty.
                 switch("{{marker.building.faculty.abbr}}") {
                     case "FST":
@@ -923,5 +923,130 @@
         function removeUnhideButton() {
             unhideButton.style.left = '-300px'; // Hide the unhide button
         }
-    </script>
+
+        //Custom filter function as the default does not do what we need.
+        function filterMarkers(filterName, mode){
+            console.log(filterSelectedFaculties)
+            console.log(filterSelectedFloors)
+            markerLayer.eachLayer(function(layer){ //For each marker
+                if(mode == "add"){ 
+                    if(filterName.includes("Faculty")){ //If mode == "add", add the faculty to the selectedFaculties list if it is a faculty
+                        filterSelectedFaculties.add(filterName);
+                    } else if (filterName.includes("Floor")){ //Likewise for floors
+                        filterSelectedFloors.add(filterName);
+                    }
+                } else if(mode == "remove"){ //Remove it from the list is mode = "remove"
+                    if(filterName.includes("Faculty")){
+                        filterSelectedFaculties.delete(filterName);
+                    } else if (filterName.includes("Floor")){
+                        filterSelectedFloors.delete(filterName);
+                    }
+                }
+
+                //If both the marker's current faculty and floor are present in the lists, then add it to the map, as it satisfies the filter conditions
+                if(filterSelectedFaculties.has(layer.facultyLong) && filterSelectedFloors.has("Floor " + layer.floor)){
+                    if(!map.hasLayer(layer)){
+                        map.addLayer(layer)
+                    }
+                } else if(map.hasLayer(layer)){ //Otherwise remove it from the map if it was there already
+                    map.removeLayer(layer)
+                }
+            });
+
+            //These grab the 2 'select all' checkboxes for Floors and Faculties
+            let floorHeader = getHeaderCheckboxByLabel("Floors");
+            let facultiesHeader = getHeaderCheckboxByLabel("Faculties");
+            console.log("Faculties size: " + filterSelectedFaculties.size)
+            if(filterSelectedFaculties.size < 10){ //If every faculty is not currently ticked, untick the select all box
+                facultiesHeader.checked = false;
+            } else {
+                facultiesHeader.checked = true; //Otherwise tick it
+            }
+
+            console.log("Faculties size: " + filterSelectedFloors.size)
+            if(filterSelectedFloors.size < 7){ //Likewise for floors
+                floorHeader.checked = false;
+            } else {
+                floorHeader.checked = true;
+            }
+
+            console.log(filterSelectedFaculties)
+            console.log(filterSelectedFloors)
+        }
+
+        //By default the plugin for the filters does not actually do what is needed. It doesn't stack filters ontop of each other
+        //Eg. I can't filter for floor 2 in FST, only by FST or only by Floor 2. This bit of code prevents the default behavior for the filters'
+        //labels, and replaces them with custom behavior to implement the needed kind of filter.
+        setTimeout(() => {
+            var labels = document.querySelectorAll('.leaflet-layerstree-header-name'); //Grab all the labels
+        
+            labels.forEach(labelSpan => {
+              labelSpan.addEventListener('click', function (e) { //For each label in the filters menu, stop the default behavior onClick;
+                e.preventDefault();
+                e.stopPropagation();
+            
+                    //These few lines just grab the name of the label by drilling down from the parent
+                    var parentLabel = this.closest('.leaflet-layerstree-header-label'); //Grab the parent container
+                    var checkbox = parentLabel?.querySelector('input[type="checkbox"]'); //Grab the checkbox
+                    var layerName = this.textContent.trim(); //Grab the name
+            
+                    if(layerName == "Floors"){ //If the label clicked on wazs one of the 'select all' labels:
+                        var floorGroup = parentLabel.closest('.leaflet-layerstree-node'); 
+                        var floorCheckboxes = floorGroup.querySelectorAll('input[type="checkbox"]');
+                        var toggleToChecked = !checkbox.checked;  // If the select all button for Floors was checked, uncheck it and vice versa.
+                        floorCheckboxes.forEach(floorCheckbox => {
+                            floorCheckbox.checked = toggleToChecked; //Also toggle all the children checkboxes
+                        });
+                    
+                        filterSelectedFloors.clear() //Now clear the current list of filters applied
+                        let floors = facultyLayers[1].children //The names of all the floor labels are in this structure
+                        if(checkbox.checked == true){ //If the state of the select all checkbox was toggle from unchecked to checked:
+                            for(let floor of floors){
+                                filterSelectedFloors.add(floor['label']); //Add every floor to the current list of filtered floors.
+                            }
+                        }
+                        filterMarkers(layerName, "all"); //Then call the custom filter function
+                    
+                    } else if (layerName == "Faculties"){ //Do the same for the Faculties select all button
+                        var facultiesGroup = parentLabel.closest('.leaflet-layerstree-node');
+                        var facultiesCheckboxes = facultiesGroup.querySelectorAll('input[type="checkbox"]');
+                        var toggleToChecked = !checkbox.checked;
+                    
+                        facultiesCheckboxes.forEach(facultiesCheckbox => {
+                            facultiesCheckbox.checked = toggleToChecked;
+                        });
+                        filterSelectedFaculties.clear()
+                        let faculties = facultyLayers[0].children
+                        if(checkbox.checked == true){
+                            for(let faculty of faculties){
+                                filterSelectedFaculties.add(faculty['label']);
+                            }
+                        }
+                        filterMarkers(layerName, "all");
+
+                    } else { //If none of the 2 above were true, then an individual checkbox was clicked, so just toggle that one.
+                        if (checkbox.checked) {
+                            filterMarkers(layerName, "remove"); //If it was checked before, uncheck it and remove it from the list of current filters
+                            checkbox.checked = !checkbox.checked;
+                        } else {
+                            filterMarkers(layerName, "add"); //Otherwise check it and add it
+                            checkbox.checked = !checkbox.checked;
+                        }
+                    }
+                });
+            });
+        }, 300);
+
+        //This function just grabs the select all DOM elements which are used in the filter function.
+        function getHeaderCheckboxByLabel(labelText) {
+            var headers = document.querySelectorAll('.leaflet-layerstree-header');
+            for (let header of headers) {
+              var labelSpan = header.querySelector('.leaflet-layerstree-header-name');
+              if (labelSpan && labelSpan.textContent.trim() === labelText) {
+                return header.querySelector('input[type="checkbox"]');
+              }
+            }
+            return null;
+        }
+</script>
 {% endblock %}

@@ -1,10 +1,15 @@
 from App.models import Building
 from App.database import db
+from sqlalchemy.exc import IntegrityError
 
 def create_building(name, facultyID, drawingCoords):
     newBuilding = Building(name=name, facultyID=facultyID, drawingCoords=drawingCoords)
-    db.session.add(newBuilding)
-    db.session.commit()
+    try:
+        db.session.add(newBuilding)
+        db.session.commit()
+    except IntegrityError as e:
+        db.session.rollback()
+        return False
     return newBuilding
 
 def get_building(name):
