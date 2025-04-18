@@ -15,6 +15,7 @@
 
 {% block code %}
     <script type="text/javascript">
+        let buildingIdMap = {};
         var map = L.map('map').setView([10.642529, -61.400225], 13); // Sets the initial map position and zoom level
         var markers;
         var faculties;
@@ -250,20 +251,8 @@
                         <input placeholder="eg. 0" id="floorNum" name="floorNum" type="number" min="0" max="6" step="1" class="validate" required>
                     </div>
                     <div class="input-field col s12">
-                        <label for="buildingName" style="position:static;">Building</label>
-                        <select name="buildingChoice" id="buildingChoice" style="display:static;" required>
-                    `;
-                    //Populates the select with all the buildings
-                    for(building of buildings){
-                        if(building['id'] == 1){
-                            html += `<option value="1" selected>N/A</option>`
-                        } else {
-                            html += `<option value="${building['id']}">${building['name']}</option>`
-                        }    
-                    }
-
-                    html += `
-                    </select>
+                      <label for="buildingAutocomplete" style="position:static;">Building</label>
+                      <input type="text" id="buildingAutocomplete" name="buildingNameText" class="autocomplete" placeholder="eg. Natural Sciences Building" required>
                     </div>
                     <div class="input-field col s12">
                         <label for="description" style="position:static;">Description (Optional)</label>
@@ -295,6 +284,22 @@
     </div>`;
                 pane.innerHTML = html;
                 pane.style.left = '10px';
+                let buildingData = {};
+
+                //Populate data for autocomplete
+                for (let building of buildings) {
+                  buildingData[building.name] = null;
+                  buildingIdMap[building.name] = building.id;
+                }
+
+                //Initialize Materialize autocomplete
+                let buildingInput = document.getElementById('buildingAutocomplete');
+                M.Autocomplete.init(buildingInput, {
+                  data: buildingData,
+                  limit: 3,
+                  minLength: 0
+                });
+                
                 document.getElementById('addMarkerForm').addEventListener('submit', addMarker);
                 //Materialize select fields need these 2 lines to of code to actually initialize the options for some reson
                 var elems = document.querySelectorAll('select');
@@ -384,6 +389,17 @@
             event.preventDefault();
             let form = event.target.elements;
             let formData = new FormData(event.target);
+
+            //Uses building name to get id
+            buildingInput = document.getElementById('buildingAutocomplete').value.trim();
+            buildingId = buildingIdMap[buildingInput];
+
+            if (!buildingId) {
+                M.toast({ html: 'Please select a valid building from the suggestions.' });
+                return;
+            }
+
+            formData.append('buildingChoice', buildingId);
             
             let response = await fetch('/addMarker', {
                 method: 'POST',
@@ -860,6 +876,18 @@
             event.preventDefault();
             let form = event.target.elements;
             let formData = new FormData(event.target);
+
+            //Uses building name to get id
+            buildingInput = document.getElementById('buildingAutocomplete').value.trim();
+            buildingId = buildingIdMap[buildingInput];
+
+            if (!buildingId) {
+                M.toast({ html: 'Please select a valid building from the suggestions.' });
+                return;
+            }
+
+            formData.append('buildingChoice', buildingId);
+
             let response = await fetch(`${event.target.action}`, {
                 method: 'POST',
                 body: formData
@@ -917,22 +945,8 @@
                         <input value="${currentMarker.data.floor}" id="floorNum" name="floorNum" type="number" min="0" max="6" step="1" class="validate" required>
                     </div>
                     <div class="input-field col s12">
-                        <label for="buildingName" style="position:static;">Building Name</label>
-                        <select name="buildingChoice" id="buildingChoice" style="display:static;">
-                    `;
-                    for(building of buildings){
-                        if(building['name'] != currentMarker.data.buildingName){
-                            html += `
-                               <option value="${building['id']}">${building['name']}</option>
-                            `
-                        } else {
-                            html += `
-                               <option value="${building['id']}" selected>${building['name']}</option>
-                            `
-                        }
-                    }
-                    html += `
-                        </select>
+                      <label for="buildingAutocomplete" style="position:static;">Building</label>
+                      <input type="text" id="buildingAutocomplete" name="buildingNameText" class="autocomplete" placeholder="eg. Natural Sciences Building" required>
                     </div>
                     <div class="input-field col s12">
                         <label for="description" style="position:static;">Description (Optional)</label>
@@ -967,6 +981,23 @@
                     </div> 
                 `;
                 infoPane.innerHTML = html;
+                
+                let buildingData = {};
+
+                //Populate data for autocomplete
+                for (let building of buildings) {
+                    buildingData[building.name] = null;
+                    buildingIdMap[building.name] = building.id;
+                }
+
+                //Initialize Materialize autocomplete
+                let buildingInput = document.getElementById('buildingAutocomplete');
+                M.Autocomplete.init(buildingInput, {
+                    data: buildingData,
+                    limit: 3,
+                    minLength: 0
+                });
+
                 currentMarker.dragging.enable();
                 currentMarker.on('dragend', function(){
                     x = document.querySelector('#x');
