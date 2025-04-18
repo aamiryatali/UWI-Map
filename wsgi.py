@@ -27,9 +27,10 @@ User Commands
 # create a group, it would be the first argument of the comand
 # eg : flask user <command>
 user_cli = AppGroup('user', help='User object commands') 
+debug_cli = AppGroup('debug', help='Show useful commands for debugging')
 
 # Then define the command and any parameters and annotate it with the group (@)
-@user_cli.command("create", help="Creates a user")
+@user_cli.command("create", help="Creates a user(admin). This user can login to edit the map.")
 @click.argument("username", default="rob")
 @click.argument("password", default="robpass")
 def create_user_command(username, password):
@@ -47,47 +48,51 @@ def list_user_command(format):
         print(get_all_users_json())
 
 app.cli.add_command(user_cli) # add the group to the cli
+app.cli.add_command(debug_cli)
 
-@user_cli.command("list-markers", help="Lists markers in the database")
+@debug_cli.command("list-markers", help="Lists markers in the database")
 def list_user_command():
     list = Marker.query.all()
     for m in list:
-        print(f'{m.x} | {m.y} | {m.image} | {m.buildingID}')
+        print(f'{m.name} | {m.x} | {m.y} | {m.image} | {m.buildingID}')
         
 
-app.cli.add_command(user_cli) # add the group to the cli
+app.cli.add_command(debug_cli) # add the group to the cli
 
-@user_cli.command('list-buildings', help="Lists the buildings in the database")
+@debug_cli.command('list-buildings', help="Lists the buildings in the database")
 def list_buildings_command():
     buildings = Building.query.all()
-    building = Building.query.get(2)
-    for marker in building.markers:
-        print(f'{marker.name} - {marker.buildingID}')
-    #for building in buildings:
-        #for marker in building.markers:
-      #  print(f'{building.name} - {building.image}')
-        
-@user_cli.command('get-data')
-def getclidata():
+    for building in buildings:
+       print(f'{building.name} | {building.image} | {building.faculty.name}')
+
+app.cli.add_command(debug_cli)
+
+@debug_cli.command('list-building-markers', help="Lists all the markers that belong to a building")
+@click.argument('building_name', default='N/A')
+def list_building_markers_command(building_name):
+    building = Building.query.filter_by(name=building_name).first()
+    if not building:
+        print("Building does not exist")
+    else:
+        for m in building.markers:
+            print(f'{m.name} | {m.x} | {m.y} | {m.image}')
+app.cli.add_command(debug_cli)
+
+@debug_cli.command('get-data')
+def get_cli_data():
     markers = Marker.query.all()
     buildings = Building.query.all()
     faculties = Faculty.query.all()
-    test = {
-        'marker': 'hi'
-    }
-    dictt = {
+    data = {
         'markers' : [marker.to_dict() for marker in markers],
         'buildings' : [building.to_dict() for building in buildings],
         'faculties' : [faculty.to_dict() for faculty in faculties]
     }
-    building = Building.query.all
-    #print([building.to_dict() for building in buildings])
-    #print([marker.to_dict() for marker in markers])
-    #print([faculty.to_dict() for faculty in faculties])
-    ljson = jsonify(dictt)
+    jsonData = jsonify(data)
+    print(jsonData)
 
 
-app.cli.add_command(user_cli) # add the group to the cli
+app.cli.add_command(debug_cli)
 
 '''
 Test Commands
