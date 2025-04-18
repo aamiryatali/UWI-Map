@@ -745,5 +745,24 @@
             }
             return null;
         }
-</script>
+
+        L.Control.Recenter = L.Control.extend({
+            onAdd: function() {
+                var button = L.DomUtil.create('button', 'leaflet-control-recenter');
+                button.title = "Recenter map";
+                button.innerHTML = `<img src="https://www.freeiconspng.com/uploads/maps-center-direction-icon-24.png" alt="Recenter" style="width: 20px; height: 20px; border: 1px solid grey; border-radius: 50%;">`;
+                button.onclick = recenterMap;
+
+                button.style.marginBottom = '1.4em';
+                return button;
+            },
+            onRemove: function() {}
+        });
+
+        L.control.recenter = function(opts) {
+            return new L.Control.Recenter(opts);
+        };
+
+        L.control.recenter({ position: 'bottomright' }).addTo(map);
+    </script>
 {% endblock %}
