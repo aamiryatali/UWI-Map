@@ -14,43 +14,6 @@
 {% endblock %}
 
 {% block code %}
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Bungee+Spice&family=Pridi:wght@200;300;400;500;600;700&display=swap');
-
-        .bungee-spice-regular {
-            font-family: "Bungee Spice", sans-serif;
-            font-weight: 400;
-            font-style: normal;
-        }
-
-        .pridi-semibold {
-            font-family: "Pridi", serif;
-            font-weight: 600;
-            font-style: normal;
-        }
-
-        label {
-            font-family: "Bungee Spice", sans-serif;
-            font-weight: bold;
-            font-size: 1.2em;
-        }
-
-        .btn-floating.transparent {
-            box-shadow: none;
-        }
-
-        
-        .leaflet-control-layers .leaflet-control-layers-list label {
-            font-family: "Pridi", serif;
-            font-weight: 400;
-            font-size: 1em;
-            color: #333;
-        }
-
-        .leaflet-draw-toolbar {
-            margin-top: 0.6em;
-        }
-    </style>
     <script type="text/javascript">
         var map = L.map('map').setView([10.642529, -61.400225], 13); // Sets the initial map position and zoom level
         var markers;
@@ -200,17 +163,35 @@
         var layerControl = L.control.layers.tree(null, facultyLayers, { position: 'bottomright', collapsed: true}).addTo(map);
 
         //These 2 sets will hold the currently selected filters to implement our custom filter functionality
-        var filterSelectedFaculties = new Set();
-        var filterSelectedFloors = new Set();
+        var filterSelectedFaculties = new Set([
+        "Faculty of Engineering",
+        "Faculty of Science & Technology",
+        "Faculty of Humanities & Education",
+        "Faculty of Law",
+        "Faculty of Food & Agriculture",
+        "Faculty of Social Sciences",
+        "Faculty of Medical Sciences",
+        "Faculty of Sport",
+        "Administrative & Student Services, Guild",
+        "Institutes, Centers, Services, Recreation, Halls etc"
+        ])
+
+        var filterSelectedFloors = new Set([
+           "Floor 0",
+           "Floor 1",
+           "Floor 2",
+           "Floor 3",
+           "Floor 4",
+           "Floor 5",
+           "Floor 6"
+        ])
 
         //Check all filter checkboxes and select all filters by default.
         for(let f of floors){
             f.addTo(map);
-            filterSelectedFloors.add(f)
         }
         for(let fac of shortFaculties){
             fac.addTo(map);
-            filterSelectedFaculties.add(fac)
         }
 
         //By default the filter button opens and closes when you hover in/out of the button. It's super annoying, so we just disabled it completely
@@ -234,6 +215,7 @@
             drawingLayer.clearLayers();
             drawnItems.clearLayers();
             addObjects(markers, buildings, faculties); // Call the addMarkers() function when the map loads
+            searchFunctionality();
         }
         loadView();
         
@@ -244,7 +226,6 @@
         map.on(L.Draw.Event.CREATED, function(e){
             var layer = e.layer;
             var type = e.layerType;
-            console.log("Layer created:" + layer)
             drawnItems.addLayer(layer);
 
             //If the drawn item was a marker
@@ -266,7 +247,7 @@
                     </div>
                     <div class="input-field col s12">
                         <label for="floorNum" style="position:static;">Floor #</label>
-                        <input placeholder="eg. 0" id="floorNum" name="floorNum" type="number" min="0" step="1" class="validate" required>
+                        <input placeholder="eg. 0" id="floorNum" name="floorNum" type="number" min="0" max="6" step="1" class="validate" required>
                     </div>
                     <div class="input-field col s12">
                         <label for="buildingName" style="position:static;">Building</label>
@@ -334,6 +315,7 @@
                         let field = document.querySelector('#newDrawingCoords');
                         field.value = geoJSONString;
                     }
+                    currentBuilding = layer;
                     return;
                 }
                 closeContainer();
@@ -491,7 +473,7 @@
             for(building of buildings){
                 var name = building['name'];
                 var newDrawingCoords = JSON.parse(building['drawingCoords'])
-
+                
                 newDrawingCoords.properties["id"] = building['id']
                 newDrawingCoords.properties["name"] = name;
                 newDrawingCoords.properties["faculty"] = building['facultyAbbr']
@@ -546,26 +528,28 @@
                     weight: 1,
                     fillOpacity: 0.2
                   });
-                
                 layer.on('dblclick', onBuildingClick); //Double clicking a building will bring up the info pane for it.
             });
         }
 
+        
         //Prepare and sort marker names
         const markerNames = {};
         const namesArray = [];
 
-        markerLayer.eachLayer(function(layer) {
-            namesArray.push(layer.name);
-        });
+        function searchFunctionality(){
+            markerLayer.eachLayer(function(layer) {
+                namesArray.push(layer.data.name);
+            });
 
-        //Sort alphabetically
-        namesArray.sort((a, b) => a.localeCompare(b));
+            //Sort alphabetically
+            namesArray.sort((a, b) => a.localeCompare(b));
 
-        //Build autocomplete data object
-        namesArray.forEach(function(name) {
-            markerNames[name] = null;
-        });
+            //Build autocomplete data object
+            namesArray.forEach(function(name) {
+                markerNames[name] = null;
+            });
+        }
 
         //Initialize Autocomplete with BOTH input and onAutocomplete handlers
         const searchInput = document.getElementById('marker-search');
@@ -574,13 +558,13 @@
             minLength: 0,
             limit:3,
             onAutocomplete: function(selectedName) {
-                filterMarkersByName(selectedName); // Ensure this handles selection
+                filterMarkersByName(selectedName.toLowerCase()); // Ensure this handles selection
             }
         });
 
         //Live filtering on input
         searchInput.addEventListener('input', function () {
-            const query = this.value.trim().toLowerCase();
+            var query = this.value.trim().toLowerCase();
             filterMarkersByName(query);
         });
 
@@ -588,14 +572,15 @@
         function filterMarkersByName(query) {
             if (!query) {
                 //If input is empty, show all markers
-                markerLayer.eachLayer(function(layer) {
+                /*markerLayer.eachLayer(function(layer) {
                     if (!map.hasLayer(layer)) map.addLayer(layer);
-                });
+                });*/
+                filterMarkers("none", "all");
                 return;
             }
 
             markerLayer.eachLayer(function(layer) {
-                const markerName = layer.name.toLowerCase();
+                const markerName = layer.data.name.toLowerCase();
                 if (markerName.includes(query)) {
                     if (!map.hasLayer(layer)) map.addLayer(layer);
 
@@ -616,7 +601,7 @@
 
         clearBtn.addEventListener('click', function () {
             searchInput.value = '';
-            filterMarkersByName(''); //Reshow all markers
+            filterMarkers("none", "all"); //Reshow all markers
         });
 
         // Brings up the building info pane on double click
@@ -667,6 +652,26 @@
             var elems = document.querySelectorAll('.materialboxed');
             var instances = M.Materialbox.init(elems);
             removeUnhideButton(); // Remove unhide button
+        }
+
+        async function editBuilding(event){
+            event.preventDefault();
+            let form = event.target.elements;
+            let formData = new FormData(event.target);
+            let response = await fetch(`${event.target.action}`, {
+                method: 'POST',
+                body: formData
+            });
+
+            let result = await response.json()
+            if('error' in result){
+                toast(result['error']);
+            } else {
+                toast(result['success']);
+                closeContainer();
+                event.target.reset();
+                loadView();
+            }
         }
 
         //Brings up the edit form for buildings
@@ -893,8 +898,8 @@
             } else {
                 toast(result['success']);
                 closeContainer();
-                loadView();
             };
+            loadView();
         }
 
         //If the edit button is clicked, then this function is what actually "makes" all the fields in the form editable and adds the real submit button
@@ -908,14 +913,14 @@
                     </div>
                     <div class="input-field col s12">
                         <label for="floorNum" style="position:static;">Floor #</label>
-                        <input value="${currentMarker.data.floor}" id="floorNum" name="floorNum" type="number" min="0" step="1" class="validate" required>
+                        <input value="${currentMarker.data.floor}" id="floorNum" name="floorNum" type="number" min="0" max="6" step="1" class="validate" required>
                     </div>
                     <div class="input-field col s12">
                         <label for="buildingName" style="position:static;">Building Name</label>
                         <select name="buildingChoice" id="buildingChoice" style="display:static;">
                     `;
                     for(building of buildings){
-                        if(building['name'] != currentMarker.data.building){
+                        if(building['name'] != currentMarker.data.buildingName){
                             html += `
                                <option value="${building['id']}">${building['name']}</option>
                             `
@@ -963,7 +968,6 @@
                 infoPane.innerHTML = html;
                 currentMarker.dragging.enable();
                 currentMarker.on('dragend', function(){
-                    console.log("Marker dragged: " + currentMarker);
                     x = document.querySelector('#x');
                     y = document.querySelector('#y');
                     x.value = currentMarker.getLatLng().lat;
@@ -992,7 +996,6 @@
             let pane = document.querySelector('#pane');
             pane.innerHTML = '';
             pane.style.left = '-300px';
-            console.log("CurrentMarker" + currentMarker)
             if(currentMarker){ //Disables dragging on the current marker if it was enabled before.
                 if(currentMarker.dragging){
                     currentMarker.dragging.disable();
@@ -1001,6 +1004,10 @@
                     currentMarker.setLatLng([oldLat, oldLng]);
                 }
             }
+            if(currentBuilding){
+                drawnItems.removeLayer(currentBuilding);
+            }
+            mode='view'
         }
 
         //All functions moved to separate functions. This function remains empty for now.
@@ -1113,7 +1120,7 @@
                 }
 
                 //If both the marker's current faculty and floor are present in the lists, then add it to the map, as it satisfies the filter conditions
-                if(filterSelectedFaculties.has(layer.facultyLong) && filterSelectedFloors.has("Floor " + layer.floor)){
+                if(filterSelectedFaculties.has(layer.data.facultyName) && filterSelectedFloors.has("Floor " + layer.data.floor)){
                     if(!map.hasLayer(layer)){
                         map.addLayer(layer)
                     }

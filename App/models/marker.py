@@ -29,6 +29,12 @@ class Marker(db.Model):
             'y': self.y
         }
 
+    def resetBuildingDefault(self):
+        self.buildingID = 1
+        db.session.add(self)
+        db.session.commit()
+        return True
+    
     def to_dict(self):
         return {
             'id' : self.id,

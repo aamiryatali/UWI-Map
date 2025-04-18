@@ -52,7 +52,7 @@ app.cli.add_command(user_cli) # add the group to the cli
 def list_user_command():
     list = Marker.query.all()
     for m in list:
-        print(f'{m.x} | {m.y} | {m.image} | {m.building}')
+        print(f'{m.x} | {m.y} | {m.image} | {m.buildingID}')
         
 
 app.cli.add_command(user_cli) # add the group to the cli
@@ -60,9 +60,12 @@ app.cli.add_command(user_cli) # add the group to the cli
 @user_cli.command('list-buildings', help="Lists the buildings in the database")
 def list_buildings_command():
     buildings = Building.query.all()
-    for building in buildings:
+    building = Building.query.get(2)
+    for marker in building.markers:
+        print(f'{marker.name} - {marker.buildingID}')
+    #for building in buildings:
         #for marker in building.markers:
-        print(f'{building.name} - {building.image}')
+      #  print(f'{building.name} - {building.image}')
         
 @user_cli.command('get-data')
 def getclidata():
@@ -82,9 +85,7 @@ def getclidata():
     #print([marker.to_dict() for marker in markers])
     #print([faculty.to_dict() for faculty in faculties])
     ljson = jsonify(dictt)
-    buildings = ljson['buildings']
-    for building in buildings:
-        print(building['faculty']['name'])
+
 
 app.cli.add_command(user_cli) # add the group to the cli
 

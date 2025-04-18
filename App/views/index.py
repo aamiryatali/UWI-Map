@@ -2,6 +2,7 @@ import urllib.request
 from flask import Blueprint, redirect, render_template, request, send_from_directory, jsonify, current_app, flash, url_for
 from flask_jwt_extended import jwt_required, current_user as jwt_current_user
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
 from App.controllers import create_user, initialize, create_building, get_marker, get_building
 from App.models import db, Marker, Building, Faculty
 from werkzeug.utils import secure_filename
@@ -43,11 +44,12 @@ def get_data():
     markers = Marker.query.all()
     buildings = Building.query.all()
     faculties = Faculty.query.all()
-    return jsonify({
+    data = {
         'markers' : [marker.to_dict() for marker in markers],
         'buildings' : [building.to_dict() for building in buildings],
         'faculties' : [faculty.to_dict() for faculty in faculties]
-    })
+    }
+    return jsonify(data), 200
 
     
 @index_views.route('/init', methods=['GET'])
@@ -184,12 +186,13 @@ def deleteBuilding(id):
     default = Building.query.get(1)
     if not building:
         return jsonify({'error' : 'Building does not exist'}), 400
+
     for marker in building.markers:
-        default.addMarker(marker.x, marker.y, marker.name, marker.floor, marker.description)
-        print(f'${marker.name} + ${marker.buildingID}')
         marker.buildingID = 1
-        print(f'${marker.name} + ${marker.buildingID}')
+        default.addMarker(marker.x, marker.y, marker.name, marker.floor, marker.description)
         db.session.add(marker)
+        print(f'{marker.name} - {marker.buildingID}')
+        
     db.session.delete(building)
     db.session.commit()
     return jsonify({'success': 'Building successfully deleted'}), 200
