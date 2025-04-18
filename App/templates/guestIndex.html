@@ -1,0 +1,769 @@
+{% extends "layout.html" %}
+{% block title %}Flask MVC App{% endblock %}
+{% block page %}Flask MVC App{% endblock %}
+
+{{ super() }}
+
+{% block content %}
+    <div id="map" style="height: 100vh; width: 100%; position: fixed; top: 0; left: 0;"></div>
+    <div id="pane" class="card col s4" style="position: fixed; top: 50%; left: -300px; transform: translateY(-50%); z-index: 1000; width: 300px; background: white; overflow-x:hidden; transition: left 0.3s ease; height:100%">
+    </div>
+    
+
+    
+{% endblock %}
+
+{% block code %}
+    <style>
+        .leaflet-control-layers {
+            transform: scale(1.05);
+            bottom: 1em;
+            left: 0.1em;
+          }
+    </style>
+    <script type="text/javascript">
+        var map = L.map('map').setView([10.642529, -61.400225], 13); // Sets the initial map position and zoom level
+        var markers;
+        var faculties;
+        var buildings;
+
+        var drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+        M.toast({html: 'Tip: You can double click buildings!'})
+
+        var mode = 'view';
+        var currentMarker;
+        var currentBuilding;
+        var drawingLayer = L.geoJSON().addTo(map)
+        var markerLayer = L.layerGroup();
+
+        var eng = L.layerGroup();
+        var fst = L.layerGroup();
+        var fhe = L.layerGroup();
+        var fol = L.layerGroup();
+        var ffa = L.layerGroup();
+        var fss = L.layerGroup();
+        var fms = L.layerGroup();
+        var fsp = L.layerGroup();
+        var admin = L.layerGroup();
+        var other = L.layerGroup();
+
+        var f0 = L.layerGroup();
+        var f1 = L.layerGroup();
+        var f2 = L.layerGroup();
+        var f3 = L.layerGroup();
+        var f4 = L.layerGroup();
+        var f5 = L.layerGroup();
+        var f6 = L.layerGroup();
+
+        const floors = [f0, f1, f2, f3, f4, f5, f6]
+        const shortFaculties = [eng, fst, fhe, fol, ffa, fss, fms, fsp, admin, other]
+
+        var facultyLayers = [
+            {
+                label: "Faculties",
+                selectAllCheckbox: true,
+                collapsed: true,
+                children: [
+                    {
+                        label: 'ENG',
+                        layer: eng
+                    },
+                    {
+                        label: 'FST',
+                        layer: fst
+                    },
+                    {
+                        label: 'FHE',
+                        layer: fhe
+                    },
+                    {
+                        label: 'FOL',
+                        layer: fol 
+                    },
+                    {
+                        label: 'FFA',
+                        layer: ffa
+                    },
+                    {
+                        label: 'FSS',
+                        layer: fss
+                    },
+                    {
+                        label: 'FMS',
+                        layer: fms
+                    },
+                    {
+                        label: 'FSP',
+                        layer: fsp
+                    },
+                    {
+                        label: 'Admin/Guild',
+                        layer: admin
+                    },
+                    {
+                        label: 'Other',
+                        layer: other
+                    }
+                ]
+            },
+            {
+                label: "Floors",
+                selectAllCheckbox: true,
+                collapsed: true,
+                children: [
+                    {
+                        label: 'Floor 0',
+                        layer: f0
+                    },
+                    {
+                        label: 'Floor 1',
+                        layer: f1
+                    },
+                    {
+                        label: 'Floor 2',
+                        layer: f2
+                    },
+                    {
+                        label: 'Floor 3',
+                        layer: f3
+                    },
+                    {
+                        label: 'Floor 4',
+                        layer: f4
+                    },
+                    {
+                        label: 'Floor 5',
+                        layer: f5
+                    },
+                    {
+                        label: 'Floor 6',
+                        layer: f6
+                    }
+                ]
+            }
+        ]
+        //Adds the filter button
+        var layerControl = L.control.layers.tree(null, facultyLayers, { position: 'bottomright', collapsed: true}).addTo(map);
+
+        //These 2 sets will hold the currently selected filters to implement our custom filter functionality
+        var filterSelectedFaculties = new Set([
+        "ENG",
+        "FST",
+        "FHE",
+        "FOL",
+        "FFA",
+        "FSS",
+        "FMS",
+        "FSP",
+        "Admin/Guild",
+        "Other"
+        ]);
+
+        var filterSelectedFloors = new Set([
+           "Floor 0",
+           "Floor 1",
+           "Floor 2",
+           "Floor 3",
+           "Floor 4",
+           "Floor 5",
+           "Floor 6"
+        ])
+
+        //Check all filter checkboxes and select all filters by default.
+        for(let f of floors){
+            f.addTo(map);
+        }
+        for(let fac of shortFaculties){
+            fac.addTo(map);
+        }
+
+        //By default the filter button opens and closes when you hover in/out of the button. It's super annoying, so we just disabled it completely
+        //by basically killing the event when it triggers.
+        var control = document.querySelector('.leaflet-control-layers');
+        ['mouseover', 'mouseenter', 'mouseout', 'mouseleave'].forEach(eventName => {
+            control.addEventListener(eventName, function (e) {
+              e.stopImmediatePropagation();
+            }, true);
+        });
+
+        async function loadView(){
+            await fetch('/get-data')
+                .then(response => response.json())
+                .then(data => {
+                    markers = data['markers']
+                    buildings = data['buildings']
+                    faculties = data['faculties']
+            })
+            markerLayer.clearLayers();
+            drawingLayer.clearLayers();
+            drawnItems.clearLayers();
+            addObjects(markers, buildings, faculties); // Call the addMarkers() function when the map loads
+            searchFunctionality();
+        }
+        loadView();
+        
+        map.doubleClickZoom.disable();
+        // Move zoom controls under the layer control toggle, with some CSS styling done in <style>
+        map.zoomControl.setPosition('bottomright');
+
+        //Alot goes on here. 
+        function addObjects(markers, buildings, faculties){
+            for(marker of markers){
+                var newMarker = L.marker([marker['x'], marker['y']], {title: marker['name']}).addTo(map); // Adds each marker to the map
+                //The marker object attributes from the backend is basically just recreated here.
+                newMarker.on('click', onMarkerClick);
+                newMarker.data = marker
+                newMarker.bindTooltip(marker['name'], {permanent: true, offset: [-15, 40], direction: "center", className: 'transparent-tooltip'});
+                var markerColorIcon;
+
+                // Add each marker to the layerGroup
+                markerLayer.addLayer(newMarker).addTo(map);
+                //Dynamically change the color of the marker icon depending on the faculty.
+                switch(marker['facultyAbbr']) {
+                    case "FST":
+                        fst.addLayer(newMarker).addTo(map);
+                        markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png"
+                        break;
+                    case "FHE":
+                        fhe.addLayer(newMarker).addTo(map);
+                        markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png"
+                        break;
+                    case "ENG":
+                        eng.addLayer(newMarker).addTo(map);
+                        markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png"
+                        break;
+                    case "FOL":
+                        fol.addLayer(newMarker).addTo(map);
+                        markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-black.png"
+                        break;
+                    case "FFA":
+                        ffa.addLayer(newMarker).addTo(map);
+                        markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png"
+                        break;
+                    case "FSS":
+                        fss.addLayer(newMarker).addTo(map);
+                        markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png"
+                        break;
+                    case "Admin/Guild":
+                        admin.addLayer(newMarker).addTo(map);
+                        markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-violet.png"
+                        break;
+                    default:
+                        other.addLayer(newMarker).addTo(map);
+                        markerColorIcon = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png"
+                        break;
+                }
+
+                var newIcon = L.icon({
+                    iconUrl: markerColorIcon,
+                    iconSize: [25, 41], 
+                    iconAnchor: [12, 41],  
+                    popupAnchor: [1, -34],
+                    tooltipAnchor: [16, -28]
+                  });
+                newMarker.setIcon(newIcon);
+            }
+
+            //Recreating pseudo-building objects from the backend.
+            for(building of buildings){
+                var name = building['name'];
+                var newDrawingCoords = JSON.parse(building['drawingCoords'])
+                
+                newDrawingCoords.properties["id"] = building['id']
+                newDrawingCoords.properties["name"] = name;
+                newDrawingCoords.properties["faculty"] = building['facultyAbbr']
+                newDrawingCoords.properties["facultylong"] = building['facultyName']
+                newDrawingCoords.properties["image"] = building['image']
+                drawingLayer.addData(newDrawingCoords)
+            }
+            
+            //Dynamically color each building depending on the faculty
+            drawingLayer.eachLayer(function(layer){
+                layer.bindTooltip(layer.feature.properties.name, {permanent: true, offset: [0, 0], direction: "center", className: 'transparent-tooltip-building'});
+                var facultyColor;
+                var fillFacultyColor;
+                switch(layer.feature.properties.faculty) {
+                    case "FST":
+                        facultyColor='gold'
+                        fillfacultyColor='yellow'
+                        break;
+                    case "FHE":
+                        facultyColor='royalblue'
+                        fillfacultyColor='royalblue'
+                        break;
+                    case "ENG":
+                        facultyColor='slategrey'
+                        fillfacultyColor='slategrey'
+                        break;
+                    case "FOL":
+                        facultyColor='black'
+                        fillfacultyColor='black'
+                        break;
+                    case "FFA":
+                        facultyColor='green'
+                        fillfacultyColor='green'
+                        break;
+                    case "FSS":
+                        facultyColor='red'
+                        fillfacultyColor='red'
+                        break;
+                    case "Admin/Guild":
+                        facultyColor='purple'
+                        fillfacultyColor='purple'
+                        break;
+                    default:
+                        facultyColor='grey'
+                        fillfacultyColor='grey'
+                        break;
+                }
+
+                layer.setStyle({
+                    color: facultyColor,
+                    fillColor: fillFacultyColor,
+                    weight: 1,
+                    fillOpacity: 0.2
+                  });
+                layer.on('dblclick', onBuildingClick); //Double clicking a building will bring up the info pane for it.
+            });
+        }
+
+        
+        //Prepare and sort marker names
+        const markerNames = {};
+        const namesArray = [];
+
+        function searchFunctionality(){
+            markerLayer.eachLayer(function(layer) {
+                namesArray.push(layer.data.name);
+            });
+
+            //Sort alphabetically
+            namesArray.sort((a, b) => a.localeCompare(b));
+
+            //Build autocomplete data object
+            namesArray.forEach(function(name) {
+                markerNames[name] = null;
+            });
+        }
+
+        //Initialize Autocomplete with BOTH input and onAutocomplete handlers
+        const searchInput = document.getElementById('marker-search');
+        const autocompleteInstance = M.Autocomplete.init(searchInput, {
+            data: markerNames,
+            minLength: 0,
+            limit:3,
+            onAutocomplete: function(selectedName) {
+                filterMarkersByName(selectedName.toLowerCase()); // Ensure this handles selection
+            }
+        });
+
+        //Live filtering on input
+        searchInput.addEventListener('input', function () {
+            var query = this.value.trim().toLowerCase();
+            filterMarkersByName(query);
+        });
+
+        //Filtering logic (shared between input and selection)
+        function filterMarkersByName(query) {
+            if (!query) {
+                //If input is empty, show all markers
+                /*markerLayer.eachLayer(function(layer) {
+                    if (!map.hasLayer(layer)) map.addLayer(layer);
+                });*/
+                filterMarkers("none", "all");
+                return;
+            }
+
+            markerLayer.eachLayer(function(layer) {
+                const markerName = layer.data.name.toLowerCase();
+                if (markerName.includes(query)) {
+                    if (!map.hasLayer(layer)) map.addLayer(layer);
+
+                    //If exact match, center and zoom
+                    if (markerName === query) {
+                        map.setView(layer.getLatLng(), 18);
+                        foundMatch = true;
+                    }
+
+                } else {
+                    if (map.hasLayer(layer)) map.removeLayer(layer);
+                }
+            });
+        }
+
+        //Clears search input
+        const clearBtn = document.getElementById('clear-search');
+
+        clearBtn.addEventListener('click', function () {
+            searchInput.value = '';
+            filterMarkers("none", "all"); //Reshow all markers
+            recenterMap();
+        });
+
+        // Brings up the building info pane on double click
+        function onBuildingClick(e) {
+            currentBuilding = e.target.feature.properties; // Ensure currentBuilding is set correctly
+            let pane = document.querySelector('#pane');
+            let building = currentBuilding; // Use currentBuilding for consistency
+            let html = `
+    <div class="row" style="overflow-x: hidden;" id='editBuildingForm' name='editBuildingForm'>
+        <div class="col s12">
+            <div class="col s12" style="background-color: #d4edda;">
+                <p style="font-family: 'Pridi', cursive">Building Information</p>
+                <button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
+                    <i class="material-icons">exit_to_app</i>
+                </button>
+            </div>
+            <div>`;
+            if (building.image != '') {
+                html += `
+                <div class="card-image crop-box">
+                    <img class="materialboxed full-img" src="${building.image}" height="200" style="border-radius: 0; object-fit:cover; object-position: 20% 10%;">
+                </div>`;
+            } else {
+                html += `<div style="margin-top: 2.5em;"></div>`;
+            }
+            html += `
+                <div name="buildingInfoForm" id="buildingInfoForm" class="card-content">
+                    <h6 style="font-family: 'Bungee Spice', cursive">Name</h6>
+                    <p style="font-family: 'Pridi', cursive">${building.name}</p>
+                    <h6 style="font-family: 'Bungee Spice', cursive">Faculty</h6>
+                    <p style="font-family: 'Pridi', cursive">${building.facultylong}</p>
+                </div>
+            </div>
+            </form>
+        </div>
+    </div>`;
+            pane.innerHTML = html;
+            pane.style.left = '10px';
+
+            // Initialize Materialboxed for the image
+            var elems = document.querySelectorAll('.materialboxed');
+            var instances = M.Materialbox.init(elems);
+            removeUnhideButton(); // Remove unhide button
+        }
+
+        function onMarkerClick(e){
+            marker = e.target
+            currentMarker = marker;
+            let pane = document.querySelector('#pane');
+            //Brings up the edit marker form. The form sends a POST request to editMarker, however you can't actually submit this form by default.
+            //By default the form actually just displays the marker info.
+            //There is an edit button at the bottom which, if clicked, replaces the contents of the form with editable fields, and a button which
+            //actually submits the form. Very jank way of doing this.
+            //The delete button is also here, but since a form can't send both a POST and a GET request to 2 differnet routes, the delete button just
+            //calls a JS function thats sends a GET request to the deleteMarker route.
+            let html = `
+    <div class="row" id='markerInfo' name='markerInfo'>
+        <div class="col s12">
+        <div class ="col s12" style="background-color: #d4edda;">
+	        <p style="font-family: 'Pridi', cursive">Marker Information</p>
+        </div>
+            <div>`
+            //Only add the image if one exists for the current marker
+            if(marker.data.image != ''){
+                html += `
+                <div class="card-image">
+                    <button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
+                        <i class="material-icons">exit_to_app</i>
+                    </button>
+                    <div class="crop-box">
+                        <img class="materialboxed full-img" src=${marker.data.image}>
+                    </div>
+                </div>
+                `
+
+            } else {
+                html += `<button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
+                            <i class="material-icons">exit_to_app</i>
+                         </button>
+                         <div style="margin-top: 2.5em;"></div>`
+            }
+            html += `
+                <div name="markerInfoForm" id="markerInfoForm" class="card-content">
+                    <span class="card-title"></span>
+                    <h6 style="font-family: 'Bungee Spice', cursive">Name</h6>
+                    <p style="font-family: 'Pridi', cursive">${marker.data.name}</p>
+                    <h6 style="font-family: 'Bungee Spice', cursive">Building</h6>
+                    <p style="font-family: 'Pridi', cursive">${marker.data.buildingName}</p>
+                    <h6 style="font-family: 'Bungee Spice', cursive">Floor Number</h6>
+                    <p style="font-family: 'Pridi', cursive">${marker.data.floor}</p>
+                    <h6 style="font-family: 'Bungee Spice', cursive">Description</h6>`
+                    if(marker.data.description != ''){
+                        html += `<p style="font-family: 'Pridi', cursive">${marker.data.description}</p>`
+                    } else {
+                        html += `<p style="font-family: 'Pridi', cursive">No description provided</p>`
+                    }
+                    
+                html += `</div>
+            </div>
+            </form>
+        </div>
+    </div>
+            `;
+            pane.innerHTML = html;
+            pane.style.left = '10px';
+            // Initialize Materialboxed for the image
+            var elems = document.querySelectorAll('.materialboxed');
+            var instances = M.Materialbox.init(elems, {
+                onCloseEnd: function() {
+                    // Reinitialize scrollable behavior for marker popup and edit panel
+                    let pane = document.querySelector('#pane');
+                    if (pane) {
+                        pane.style.overflow = 'auto';
+                    }
+                }
+            });
+            removeUnhideButton(); // Remove unhide button
+        }
+
+        //This function sort of servers a double purpose right now. It closes the info pane, but in the case of cancelling a marker addition/edit, it also
+        //removes that marker from the map. Should probably separate.
+        function closeContainer(oldLat=null, oldLng=null){
+            let pane = document.querySelector('#pane');
+            pane.innerHTML = '';
+            pane.style.left = '-300px';
+            if(currentMarker){ //Disables dragging on the current marker if it was enabled before.
+                if(currentMarker.dragging){
+                    currentMarker.dragging.disable();
+                }
+                if(oldLat != null && oldLng != null){
+                    currentMarker.setLatLng([oldLat, oldLng]);
+                }
+            }
+            if(currentBuilding){
+                drawnItems.removeLayer(currentBuilding);
+            }
+            mode='view'
+        }
+
+        //All functions moved to separate functions. This function remains empty for now.
+        function onMapClick(e){
+            //I used to be very long 
+        }
+
+        //This function isn't called in the current state of the website, but may be used/expanded later.
+        function recenterMap() {
+            map.setView([10.646447, -61.400807], 13);
+        }
+        
+        //Clean basemap no building names
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+            minZoom: 16,
+            maxZoom: 50,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+            subdomains: 'abcd'
+        }).addTo(map);
+
+        //Original basemap with building names
+        /*L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            minZoom: 16,
+            maxZoom: 50,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);*/
+        // Prevent scrolling
+        document.body.style.overflow = 'hidden';
+
+        // Add the unhide button to the document body
+        var unhideButton = document.createElement('button');
+        unhideButton.innerHTML = 'Unhide Information';
+        unhideButton.className = 'waves-effect waves-light green btn';
+        unhideButton.style.position = 'fixed';
+        unhideButton.style.bottom = '10px';
+        unhideButton.style.left = '-300px'; // Initially hidden
+        unhideButton.style.zIndex = '1500';
+        unhideButton.onclick = unhideInformation;
+        document.body.appendChild(unhideButton);
+
+        // Function to hide the information panel
+        function hideInformation() {
+            let pane = document.querySelector('#pane');
+            if (pane) {
+                pane.style.left = '-300px';
+                unhideButton.style.left = '10px'; // Show the unhide button
+            }
+        }
+
+        // Function to unhide the information panel
+        function unhideInformation() {
+            let pane = document.querySelector('#pane');
+            if (pane) {
+                pane.style.left = '10px';
+                unhideButton.style.left = '-300px'; // Hide the unhide button
+            }
+        }
+
+        // Function to remove the unhide button
+        function removeUnhideButton() {
+            unhideButton.style.left = '-300px'; // Hide the unhide button
+        }
+
+        // Add swipe functionality for the pane
+        let touchStartX, touchEndX;
+        const pane = document.querySelector('#pane');
+
+        pane.addEventListener('touchstart', e => {
+            // Restrict swipe to ribbon or text, ignore buttons, input fields, materialboxed elements, and their overlays
+            if (e.target.tagName === 'BUTTON' || 
+                e.target.tagName === 'INPUT' || 
+                e.target.tagName === 'TEXTAREA' || 
+                e.target.tagName === 'SELECT' || 
+                e.target.closest('.materialboxed') || 
+                e.target.closest('.materialbox-overlay')) {
+                return;
+            }
+            touchStartX = e.targetTouches[0].clientX;
+        });
+
+        pane.addEventListener('touchmove', e => {
+            if (touchStartX !== undefined) {
+                touchEndX = e.targetTouches[0].clientX;
+            }
+        });
+
+        pane.addEventListener('touchend', () => {
+            if (touchStartX !== undefined && touchStartX - touchEndX > 45) { // Swipe left to close
+                closeContainer();
+            }
+            touchStartX = undefined; // Reset touchStartX
+        });
+
+        //Custom filter function as the default does not do what we need.
+        function filterMarkers(filterName, mode){
+            markerLayer.eachLayer(function(layer){ //For each marker
+                if(mode == "add"){ 
+                    if(filterName.length === 3 || filterName === "Admin/Guild" || filterName === 'Other'){ //If mode == "add", add the faculty to the selectedFaculties list if it is a faculty
+                        filterSelectedFaculties.add(filterName);
+                    } else if (filterName.includes("Floor")){ //Likewise for floors
+                        filterSelectedFloors.add(filterName);
+                    }
+                } else if(mode == "remove"){ //Remove it from the list is mode = "remove"
+                    if(filterName.length === 3 || filterName === "Admin/Guild" || filterName === 'Other'){
+                        filterSelectedFaculties.delete(filterName);
+                    } else if (filterName.includes("Floor")){
+                        filterSelectedFloors.delete(filterName);
+                    }
+                }
+
+                //If both the marker's current faculty and floor are present in the lists, then add it to the map, as it satisfies the filter conditions
+                if(filterSelectedFaculties.has(layer.data.facultyAbbr) && filterSelectedFloors.has("Floor " + layer.data.floor)){
+                    if(!map.hasLayer(layer)){
+                        map.addLayer(layer)
+                    }
+                } else if(map.hasLayer(layer)){ //Otherwise remove it from the map if it was there already
+                    map.removeLayer(layer)
+                }
+            });
+
+            //These grab the 2 'select all' checkboxes for Floors and Faculties
+            let floorHeader = getHeaderCheckboxByLabel("Floors");
+            let facultiesHeader = getHeaderCheckboxByLabel("Faculties");
+            if(filterSelectedFaculties.size < 10){ //If every faculty is not currently ticked, untick the select all box
+                facultiesHeader.checked = false;
+            } else {
+                facultiesHeader.checked = true; //Otherwise tick it
+            }
+
+            if(filterSelectedFloors.size < 7){ //Likewise for floors
+                floorHeader.checked = false;
+            } else {
+                floorHeader.checked = true;
+            }
+        }
+
+        //By default the plugin for the filters does not actually do what is needed. It doesn't stack filters ontop of each other
+        //Eg. I can't filter for floor 2 in FST, only by FST or only by Floor 2. This bit of code prevents the default behavior for the filters'
+        //labels, and replaces them with custom behavior to implement the needed kind of filter.
+        setTimeout(() => {
+            var labels = document.querySelectorAll('.leaflet-layerstree-header-name'); //Grab all the labels
+        
+            labels.forEach(labelSpan => {
+              labelSpan.addEventListener('click', function (e) { //For each label in the filters menu, stop the default behavior onClick;
+                e.preventDefault();
+                e.stopPropagation();
+            
+                    //These few lines just grab the name of the label by drilling down from the parent
+                    var parentLabel = this.closest('.leaflet-layerstree-header-label'); //Grab the parent container
+                    var checkbox = parentLabel?.querySelector('input[type="checkbox"]'); //Grab the checkbox
+                    var layerName = this.textContent.trim(); //Grab the name
+            
+                    if(layerName == "Floors"){ //If the label clicked on wazs one of the 'select all' labels:
+                        var floorGroup = parentLabel.closest('.leaflet-layerstree-node'); 
+                        var floorCheckboxes = floorGroup.querySelectorAll('input[type="checkbox"]');
+                        var toggleToChecked = !checkbox.checked;  // If the select all button for Floors was checked, uncheck it and vice versa.
+                        floorCheckboxes.forEach(floorCheckbox => {
+                            floorCheckbox.checked = toggleToChecked; //Also toggle all the children checkboxes
+                        });
+                    
+                        filterSelectedFloors.clear() //Now clear the current list of filters applied
+                        let floors = facultyLayers[1].children //The names of all the floor labels are in this structure
+                        if(checkbox.checked == true){ //If the state of the select all checkbox was toggle from unchecked to checked:
+                            for(let floor of floors){
+                                filterSelectedFloors.add(floor['label']); //Add every floor to the current list of filtered floors.
+                            }
+                        }
+                        filterMarkers(layerName, "all"); //Then call the custom filter function
+                    
+                    } else if (layerName == "Faculties"){ //Do the same for the Faculties select all button
+                        var facultiesGroup = parentLabel.closest('.leaflet-layerstree-node');
+                        var facultiesCheckboxes = facultiesGroup.querySelectorAll('input[type="checkbox"]');
+                        var toggleToChecked = !checkbox.checked;
+                    
+                        facultiesCheckboxes.forEach(facultiesCheckbox => {
+                            facultiesCheckbox.checked = toggleToChecked;
+                        });
+                        filterSelectedFaculties.clear()
+                        let filterFaculties = facultyLayers[0].children
+                        if(checkbox.checked == true){
+                            for(let faculty of filterFaculties){
+                                filterSelectedFaculties.add(faculty['label']);
+                            }
+                        }
+                        filterMarkers(layerName, "all");
+
+                    } else { //If none of the 2 above were true, then an individual checkbox was clicked, so just toggle that one.
+                        if (checkbox.checked) {
+                            filterMarkers(layerName, "remove"); //If it was checked before, uncheck it and remove it from the list of current filters
+                            checkbox.checked = !checkbox.checked;
+                        } else {
+                            filterMarkers(layerName, "add"); //Otherwise check it and add it
+                            checkbox.checked = !checkbox.checked;
+                        }
+                    }
+                });
+            });
+        }, 300);
+
+        //This function just grabs the select all DOM elements which are used in the filter function.
+        function getHeaderCheckboxByLabel(labelText) {
+            var headers = document.querySelectorAll('.leaflet-layerstree-header');
+            for (let header of headers) {
+              var labelSpan = header.querySelector('.leaflet-layerstree-header-name');
+              if (labelSpan && labelSpan.textContent.trim() === labelText) {
+                return header.querySelector('input[type="checkbox"]');
+              }
+            }
+            return null;
+        }
+
+        L.Control.Recenter = L.Control.extend({
+            onAdd: function() {
+                var button = L.DomUtil.create('button', 'leaflet-control-recenter');
+                button.title = "Recenter map";
+                button.innerHTML = `<img src="https://www.freeiconspng.com/uploads/maps-center-direction-icon-24.png" alt="Recenter" style="width: 20px; height: 20px; border: 1px solid grey; border-radius: 50%;">`;
+                button.onclick = recenterMap;
+
+                button.style.marginBottom = '1.4em';
+                return button;
+            },
+            onRemove: function() {}
+        });
+
+        L.control.recenter = function(opts) {
+            return new L.Control.Recenter(opts);
+        };
+
+        L.control.recenter({ position: 'bottomright' }).addTo(map);
+    </script>
+{% endblock %}

@@ -12,3 +12,6 @@ def get_faculty(name):
     if not faculty:
         return False
     return faculty
+
+def get_faculties():
+    return Faculty.query.all()
