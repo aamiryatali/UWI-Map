@@ -112,7 +112,14 @@
           .leaflet-control-layers:not(.leaflet-control-layers-expanded) .leaflet-control-layers-list {
             display: none;
           }
-        
+
+          .leaflet-control-layers-expanded {
+            position: absolute !important;
+            z-index: 1000;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0px 4px 8px rgba(0,0,0,0.3);
+          }
 
           .bungee-spice-regular {
               font-family: "Bungee Spice", sans-serif;
