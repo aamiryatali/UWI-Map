@@ -65,43 +65,43 @@
                 collapsed: true,
                 children: [
                     {
-                        label: 'Faculty of Engineering',
+                        label: 'ENG',
                         layer: eng
                     },
                     {
-                        label: 'Faculty of Science & Technology',
+                        label: 'FST',
                         layer: fst
                     },
                     {
-                        label: 'Faculty of Humanities & Education',
+                        label: 'FHE',
                         layer: fhe
                     },
                     {
-                        label: 'Faculty of Law',
+                        label: 'FOL',
                         layer: fol 
                     },
                     {
-                        label: 'Faculty of Food & Agriculture',
+                        label: 'FFA',
                         layer: ffa
                     },
                     {
-                        label: 'Faculty of Social Sciences',
+                        label: 'FSS',
                         layer: fss
                     },
                     {
-                        label: 'Faculty of Medical Sciences',
+                        label: 'FMS',
                         layer: fms
                     },
                     {
-                        label: 'Faculty of Sport',
-                        layer: eng 
+                        label: 'FSP',
+                        layer: fsp
                     },
                     {
-                        label: 'Administrative & Student Services, Guild',
+                        label: 'Admin/Guild',
                         layer: admin
                     },
                     {
-                        label: 'Institutes, Centers, Services, Recreation, Halls etc',
+                        label: 'Other',
                         layer: other
                     }
                 ]
@@ -147,17 +147,17 @@
 
         //These 2 sets will hold the currently selected filters to implement our custom filter functionality
         var filterSelectedFaculties = new Set([
-        "Faculty of Engineering",
-        "Faculty of Science & Technology",
-        "Faculty of Humanities & Education",
-        "Faculty of Law",
-        "Faculty of Food & Agriculture",
-        "Faculty of Social Sciences",
-        "Faculty of Medical Sciences",
-        "Faculty of Sport",
-        "Administrative & Student Services, Guild",
-        "Institutes, Centers, Services, Recreation, Halls etc"
-        ])
+        "ENG",
+        "FST",
+        "FHE",
+        "FOL",
+        "FFA",
+        "FSS",
+        "FMS",
+        "FSP",
+        "Admin/Guild",
+        "Other"
+        ]);
 
         var filterSelectedFloors = new Set([
            "Floor 0",
@@ -468,7 +468,7 @@
                     </button>
                     <div class="crop-box">
                         <img class="materialboxed full-img" src=${marker.data.image}>
-                    /div>
+                    </div>
                 </div>
                 `
 
@@ -631,13 +631,13 @@
         function filterMarkers(filterName, mode){
             markerLayer.eachLayer(function(layer){ //For each marker
                 if(mode == "add"){ 
-                    if(filterName.includes("Faculty")){ //If mode == "add", add the faculty to the selectedFaculties list if it is a faculty
+                    if(filterName.length === 3 || filterName === "Admin/Guild" || filterName === 'Other'){ //If mode == "add", add the faculty to the selectedFaculties list if it is a faculty
                         filterSelectedFaculties.add(filterName);
                     } else if (filterName.includes("Floor")){ //Likewise for floors
                         filterSelectedFloors.add(filterName);
                     }
                 } else if(mode == "remove"){ //Remove it from the list is mode = "remove"
-                    if(filterName.includes("Faculty")){
+                    if(filterName.length === 3 || filterName === "Admin/Guild" || filterName === 'Other'){
                         filterSelectedFaculties.delete(filterName);
                     } else if (filterName.includes("Floor")){
                         filterSelectedFloors.delete(filterName);
@@ -645,7 +645,7 @@
                 }
 
                 //If both the marker's current faculty and floor are present in the lists, then add it to the map, as it satisfies the filter conditions
-                if(filterSelectedFaculties.has(layer.data.facultyName) && filterSelectedFloors.has("Floor " + layer.data.floor)){
+                if(filterSelectedFaculties.has(layer.data.facultyAbbr) && filterSelectedFloors.has("Floor " + layer.data.floor)){
                     if(!map.hasLayer(layer)){
                         map.addLayer(layer)
                     }
@@ -668,6 +668,8 @@
             } else {
                 floorHeader.checked = true;
             }
+            console.log(filterSelectedFaculties)
+            console.log(filterSelectedFloors)
         }
 
         //By default the plugin for the filters does not actually do what is needed. It doesn't stack filters ontop of each other

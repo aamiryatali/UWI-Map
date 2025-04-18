@@ -26,7 +26,7 @@
     {% if not is_authenticated %}
     
     {% endif %}
-    <div class="input-field" style="position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 900; width: 300px;">
+    <div class="input-field" id='search-bar'>
       <input type="text" id="marker-search" class="autocomplete" placeholder="Search for a marker">
       <button id="clear-search" class="btn-flat" type="button">✕</button>
     </div>
@@ -71,6 +71,23 @@
   </script>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Bungee+Spice&family=Pridi:wght@200;300;400;500;600;700&display=swap');
+
+      #search-bar{
+        position: fixed; 
+        top: 0px; 
+        left: 47vw; 
+        transform: 
+        translateX(-50%); 
+        z-index: 900; 
+        width: 20vw;
+      }
+
+      @media only screen and (max-width: 600px) {
+        #search-bar{
+          left: 40vw;
+          width:60vw;
+        }
+      }
 
         #map {
             height: 60vh;
@@ -183,7 +200,6 @@
             margin-top: 0.6em;
         }
 
-<<<<<<< HEAD
         .crop-box {
           width: 300px;
           height: 200px;
@@ -194,7 +210,6 @@
           width: 100%;
           height: auto;
         }
-=======
           .leaflet-control-layers {
             pointer-events: auto;
           }
@@ -279,15 +294,6 @@
             opacity: 0.6;
             font-size: 1.2em;
           }
-
-          #toast-container {
-            top: 20px;
-            bottom: auto;
-            right: 50%;
-            transform: translateX(50%);
-            z-index: 9999;
-          }
->>>>>>> 0e656bd8a749371e85b27fb18e2ddffe785b0df4
     </style>
     <div id="content">{% block content %}{% endblock %}</div>
     <script>
