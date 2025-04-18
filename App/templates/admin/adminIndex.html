@@ -400,8 +400,12 @@
                     </div>
 
                     <input type="hidden" name="geoJSON" id="geoJSON" value='${geoJSONString}'>                    
-                      <button class="waves-effect waves-light btn" type="submit">Add Building</button>
-                      <input class="waves-effect waves-light white btn black-text right" type="button" value="Cancel" onclick="closeContainer()">   
+                    <div class="input-field col s12">
+                        <div style="display: flex; justify-content: center; gap: 10px;">
+                            <button class="waves-effect waves-light btn" type="submit">Add Building</button>
+                            <input class="waves-effect waves-light white btn black-text" type="button" value="Cancel" onclick="closeContainer()">   
+                        </div>
+                    </div>
                 </div>
             </form>
         </div>
@@ -702,8 +706,8 @@
                     <p style="font-family: 'Pridi', cursive">${building.facultylong}</p>
                 </div>
                 <div name="buildingInfoFormButtons" id="buildingInfoFormButtons" class="card-action" style="position:static;">
-                    <input type="button" onclick="editBuildingView()" class="waves-effect waves-light orange btn" value="Edit">
-                    <button type="button" onclick="deleteBuilding(${building.id})" class="waves-effect waves-light red btn">Delete</button>
+                    <input type="button" onclick="editBuildingView()" class="waves-effect waves-light orange btn" value="Edit" style="font-family: 'Pridi', cursive">
+                    <button type="button" onclick="deleteBuilding(${building.id})" class="waves-effect waves-light red btn right" style="font-family: 'Pridi', cursive">Delete</button>
                 </div>
             </div>
             </form>
@@ -798,9 +802,11 @@
                 var buttons = document.querySelector('#buildingInfoFormButtons');
                 if (buttons != undefined) {
                     buttons.innerHTML = `
+                    <div style="margin-top: 80px; margin-left: 10px; display: flex; flex-direction: column; gap: 10px;">
                       <button class="waves-effect waves-light orange btn" type="submit">Update Building</button>
                       <input class="waves-effect waves-light white btn black-text" type="button" value="Cancel" onclick="closeContainer()">    
-                      <button class="waves-effect waves-light blue btn" type="button" onclick="hideInformation()">Hide Information</button>
+                      <button class="waves-effect waves-light blue btn" type="button" onclick="hideInformation()">Hide</button>
+                    </div>
                     `;
                 }
             }
@@ -1064,11 +1070,13 @@
 
                 //This code replaces the button with the real button to actually submit the form
                 var buttons = document.querySelector('#markerInfoFormButtons');
-                if(buttons != undefined){
+                if (buttons != undefined) {
                     buttons.innerHTML = `
-                      <button class="waves-effect waves-light orange btn" type="submit">Update Marker</button>
-                      <input class="waves-effect waves-light white btn black-text" type="button" value="Cancel" onclick="closeContainer(${currentMarker.getLatLng().lat}, ${currentMarker.getLatLng().lng})">    
-                      <button class="waves-effect waves-light blue btn" type="button" onclick="hideInformation()">Hide Information</button>
+                        <div style="margin-top: 700px; margin-left: 10px; display: flex; flex-direction: column; gap: 10px;">
+                            <button class="waves-effect waves-light orange btn" type="submit">Update Marker</button>
+                            <input class="waves-effect waves-light white btn black-text" type="button" value="Cancel" onclick="closeContainer(${currentMarker.getLatLng().lat}, ${currentMarker.getLatLng().lng})">
+                            <button class="waves-effect waves-light blue btn" type="button" onclick="hideInformation()">Hide</button>
+                        </div>
                     `;
                 }
             }
@@ -1125,7 +1133,7 @@
 
         // Add the unhide button to the document body
         var unhideButton = document.createElement('button');
-        unhideButton.innerHTML = 'Unhide Information';
+        unhideButton.innerHTML = 'Unhide';
         unhideButton.className = 'waves-effect waves-light green btn';
         unhideButton.style.position = 'fixed';
         unhideButton.style.bottom = '10px';
