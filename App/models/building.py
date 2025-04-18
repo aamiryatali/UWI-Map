@@ -1,5 +1,6 @@
 from App.database import db
 from .marker import Marker
+from sqlalchemy.exc import IntegrityError
 
 class Building(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -43,7 +44,27 @@ class Building(db.Model):
             db.session.rollback()
             return False
 
-        self.markers.append(marker)
-        db.session.add(marker)
-        db.session.commit()
+        try:
+            self.markers.append(marker)
+            db.session.add(marker)
+            db.session.commit()
+        except IntegrityError as e:
+            db.session.rollback()
+            return False
+        except Exception as e:
+            db.session.rollback()
+            return False
         return marker
+    
+    def to_dict(self):
+        return {
+            'id' : self.id,
+            'name' : self.name,
+            'drawingCoords' : self.drawingCoords,
+            'markers' : self.markers,
+            'facultyID' : self.facultyID,
+            'image' : self.image,
+            'facultyName' : self.faculty.name,
+            'facultyAbbr' : self.faculty.abbr,
+            'markers': [marker.to_dict() for marker in self.markers]
+        }

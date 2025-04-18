@@ -12,3 +12,11 @@ class Faculty(db.Model):
 
     def getBuildings(self):
             return self.buildings
+    
+    def to_dict(self):
+        return {
+            'id' : self.id,
+            'name' : self.name,
+            'abbr' : self.abbr,
+            'buildings' : [building.to_dict() for building in self.buildings]
+        }

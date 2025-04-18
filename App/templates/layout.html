@@ -1,84 +1,108 @@
 <!doctype html>
 <html>
   <head>
-  
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-     <!--Import Google Icon Font-->
+    <!--Import Google Icon Font-->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!-- Compiled and minified CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet.locatecontrol/dist/L.Control.Locate.min.css" />
-    <!--Let browser know website is optimized for mobile-->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-    crossorigin=""/>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/0.4.2/leaflet.draw.css"/>
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.control.layers.tree/L.Control.Layers.Tree.css" />
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/0.4.2/leaflet.draw.js"></script>
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
     <script src="https://unpkg.com/leaflet.locatecontrol/dist/L.Control.Locate.min.js"></script>
     <script src="https://unpkg.com/leaflet.control.layers.tree/L.Control.Layers.Tree.js"></script>
-    
+    <script src="{{ url_for('static', filename='util.js') }}"></script>
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>{% block title %}{% endblock %}</title>
-
   </head>
   <body>
+    {% if not is_authenticated %}
     
-      <nav class="purple">
-          <div class="nav-wrapper">
-              <a href="#!" class="brand-logo center">{% block page %}{% endblock %}</a>
-              <ul id="nav-mobile" class="left">
-                  <li><a href="/">Home</a></li>
-                  <li><a href="/users">Users Jinja</a></li>
-                  {% if is_authenticated %}
-                    <li><a href="/identify">Identify</a></li>
-                  {% endif %}
-                  <li><a href="/static/users">Users JS</a></li>
-              </ul>
-              {% if is_authenticated %}
-              <ul id="nav-mobile" class="right">
-                <li><a href="/logout">Logout</a></li>
-              </ul>
-              {% else %}
-              <form class="right navbar-form" method="POST" action="/login" style="display: flex; flex-wrap: nowrap; align-items: center; margin-right: 10px;">
-                  <div class="input-field" style="margin-right: 10px;">
-                      <input placeholder="username" value="bob" name="username" type="text" class="validate" required>
-                      <label for="username">username</label>
-                  </div>
-                  <div class="input-field" style="margin-right: 10px;">
-                      <input placeholder="password"value="bobpass" name="password" type="password" class="validate" required>
-                      <label for="password">Password</label>
-                  </div>
-                  <button type="submit" class="btn waves-effect waves-light">Login</button>
-              </form>
-              {% endif %}
-              
-          </div>
-      </nav>
-      <style>
-          .navbar-form label {
-              color: white !important;
-          }
+    {% endif %}
+    <div class="input-field" id='search-bar'>
+      <input type="text" id="marker-search" class="autocomplete" placeholder="Search for a marker">
+      <button id="clear-search" class="btn-flat" type="button">✕</button>
+    </div>
+    {% if is_authenticated %}
+    <div style="position: fixed; top: 10px; right: 6px; z-index: 900;">
+      <form action='/logout'>
+        <button type="submit" name='logoutBtn' id='logoutBtn' class="btn waves-effect waves-light white black-text">Logout</button>
+      </form>
+    </div>
+    {% else %}
+    <div style="position: fixed; top: 10px; right: 6px; z-index: 900;">
+      <a class="btn-floating btn-large waves-effect waves-light white" id="login-icon" 
+         style="background-image: url('https://static.vecteezy.com/system/resources/thumbnails/009/292/244/small/default-avatar-icon-of-social-media-user-vector.jpg'); background-size: cover; background-position: center;" 
+         title="Admin Login"></a>
+      <div id="login-popup" style="display: none; position: absolute; top: 60px; right: 0; background: white; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); padding: 1em; border-radius: 8px; z-index: 1500;">
+          <form method="POST" action="/login">
+              <div class="input-field">
+                  <input placeholder="username" value="bob" name="username" type="text" class="validate" required>
+                  <label for="username" style="font-family: Arial, sans-serif !important;">Username</label>
+              </div>
+              <div class="input-field">
+                  <input placeholder="password" value="bobpass" name="password" type="password" class="validate" required>
+                  <label for="password" style="font-family: Arial, sans-serif !important;">Password</label>
+              </div>
+              <button type="submit" class="btn waves-effect waves-light">Login</button>
+          </form>
+      </div>
+    </div>
+    {% endif %}
+  
+  <script>
+      const loginIcon = document.getElementById('login-icon');
+      const loginPopup = document.getElementById('login-popup');
+      if(loginIcon){
+        loginIcon.addEventListener('click', () => {
+            loginPopup.style.display = loginPopup.style.display === 'none' ? 'block' : 'none';
+        });
+        document.addEventListener('click', (e) => {
+            if (!loginPopup.contains(e.target) && e.target !== loginIcon) {
+                loginPopup.style.display = 'none';
+            }
+        });
+      }
+  </script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Bungee+Spice&family=Pridi:wght@200;300;400;500;600;700&display=swap');
 
-          .navbar{
-            opacity: 10%;
-          }
+      #search-bar{
+        position: fixed; 
+        top: 0px; 
+        left: 47vw; 
+        transform: 
+        translateX(-50%); 
+        z-index: 900; 
+        width: 20vw;
+      }
 
-          #map {
+      @media only screen and (max-width: 600px) {
+        #search-bar{
+          left: 40vw;
+          width:60vw;
+        }
+      }
+
+        #map {
             height: 60vh;
             width: 60vw;
-          }
+        }
 
-          p{
+        p {
             left: 80vw;
             bottom: 50vh;
             z-index: 1000;
-          }
+        }
 
-          .transparent-tooltip {
+        .transparent-tooltip {
             color: white;
             background: none;
             font-weight: bold;
@@ -86,52 +110,210 @@
             border: none;
             box-shadow: none;
             text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-          }
-          .transparent-tooltip-building {
+        }
+
+        .transparent-tooltip-building {
             color: black;
             font-weight: bold;
             font-size: 12px;
             border: none;
             background: none;
             box-shadow: none;
-          }
+        }
 
-          .leaflet-draw-toolbar {
-            margin-bottom: 3.3em;
+        .leaflet-draw-toolbar {
+            margin-bottom: 2.6em;
             margin-right: 0.3em;
             border: none;
-            font-size: 18px; 
-            background-clip: border-box;    
+            font-size: 18px;
+            background-clip: border-box;
             transform: scale(1.5);
-          }
+        }
 
-          .leaflet-control-zoom {
+        .leaflet-control-zoom {
             transform: scale(1.5);
-            bottom: 3em;
+            bottom: 2em;
             right: 0.5em;
-          }
+        }
 
-          .leaflet-control-locate {
+        .leaflet-control-locate {
             transform: scale(1.5);
-            bottom: 8.5em;
+            bottom: 2.2em;
             right: 0.5em;
-          }
+        }
 
-          .leaflet-control-layers{
+        .leaflet-control-layers {
             transform: scale(1.05);
-            bottom: -1.3em;
+            bottom: 2.2em;
             left: 0.1em;
+        }
+
+        .leaflet-layerstree-opened{
+          font-size: 30px;
+          margin-right: 5px;
+        }
+        .leaflet-layerstree-closed{
+          font-size: 30px;
+          margin-right: 5px;
+        }
+        
+        .leaflet-layerstree-header-name{
+          font-size: 15px;
+        }
+
+        .leaflet-control-layers {
+          pointer-events: auto;
+        }
+        
+        .leaflet-control-layers:not(.leaflet-control-layers-expanded) .leaflet-control-layers-list {
+          display: none;
+        }
+    
+        .bungee-spice-regular {
+            font-family: "Bungee Spice", sans-serif;
+            font-weight: 400;
+            font-style: normal;
+        }
+      
+        .pridi-semibold {
+            font-family: "Pridi", serif;
+            font-weight: 600;
+            font-style: normal;
+        }
+      
+        label {
+            font-family: "Bungee Spice", sans-serif;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+      
+        .btn-floating.transparent {
+            box-shadow: none;
+        }
+      
+        .leaflet-control-layers .leaflet-control-layers-list label {
+            font-family: "Pridi", serif;
+            font-weight: 400;
+            font-size: 1em;
+            color: #333;
+        }
+      
+        .leaflet-draw-toolbar {
+            margin-top: 0.6em;
+        }
+
+        .crop-box {
+          width: 300px;
+          height: 200px;
+          overflow: hidden;
+        }
+
+        .full-img {
+          width: 100%;
+          height: auto;
+        }
+          .leaflet-control-layers {
+            pointer-events: auto;
+          }
+          
+          .leaflet-control-layers:not(.leaflet-control-layers-expanded) .leaflet-control-layers-list {
+            display: none;
           }
 
+          .leaflet-control-layers-expanded {
+            position: absolute !important;
+            z-index: 1000;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0px 4px 8px rgba(0,0,0,0.3);
+          }
+
+          .bungee-spice-regular {
+              font-family: "Bungee Spice", sans-serif;
+              font-weight: 400;
+              font-style: normal;
+          }
+        
+          .pridi-semibold {
+              font-family: "Pridi", serif;
+              font-weight: 600;
+              font-style: normal;
+          }
+        
+          label {
+              font-family: "Bungee Spice", sans-serif;
+              font-weight: bold;
+              font-size: 1.2em;
+          }
+        
+          .btn-floating.transparent {
+              box-shadow: none;
+          }
+        
           
-      </style>
+          .leaflet-control-layers .leaflet-control-layers-list label {
+              font-family: "Pridi", serif;
+              font-weight: 400;
+              font-size: 1em;
+              color: #333;
+          }
+        
+          .leaflet-draw-toolbar {
+              margin-top: 0.6em;
+          }
 
+          #marker-search::placeholder {
+            color: teal;
+            opacity: 0.85;
+          }
+
+          #marker-search {
+            border-bottom: 1.5px solid teal;
+            opacity: 0.6;
+          }
+
+          .leaflet-control-recenter {
+            background-color: white;
+            bottom: 2.4em;
+            right: -0.23em;
+            width: 50px;
+            height: 50px;
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: none;
+            cursor: pointer;
+            border: 3px solid rgb(197, 196, 196); /* Added gray border */
+          }
+
+          #clear-search {
+            position: absolute;
+            right: 0;
+            top: 0;
+            height: 100%;
+            color: teal;
+            opacity: 0.6;
+            font-size: 1.2em;
+          }
+
+          .leaflet-draw-tooltip {
+            z-index: 1000 !important;
+        }
+        
+        .leaflet-draw-guide-dash {
+            pointer-events: none;
+        }
+        
+        .leaflet-draw-edit-marker {
+            width: 12px !important;
+            height: 12px !important;
+        }
+        
+    </style>
     <div id="content">{% block content %}{% endblock %}</div>
-
-
     <script>
-       M.AutoInit();
-
+        M.AutoInit();
         {% with messages = get_flashed_messages() %}
           {% if messages %}
               {% for message in messages %}
@@ -139,11 +321,7 @@
               {% endfor %}
           {% endif %}
         {% endwith %}
-       
     </script>
-
-    
-    
     {% block code %} {% endblock %}
   </body>
 </html>
