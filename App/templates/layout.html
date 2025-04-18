@@ -30,7 +30,45 @@
       <input type="text" id="marker-search" class="autocomplete" placeholder="Search for a marker">
       <button id="clear-search" class="btn-flat" type="button" style="position: absolute; right: 0; top: 0; height: 100%; color: #999; font-size: 1.2em;">✕</button>
     </div>
-
+    {% if is_authenticated %}
+    <div style="position: fixed; top: 10px; right: 6px; z-index: 900;">
+      <form action='/logout'>
+        <button type="submit" name='logoutBtn' id='logoutBtn' class="btn waves-effect waves-light white black-text">Logout</button>
+      </form>
+    </div>
+    {% else %}
+    <div style="position: fixed; top: 10px; right: 6px; z-index: 900;">
+      <a class="btn-floating btn-large waves-effect waves-light white" id="login-icon" style="background-image: url('https://static.vecteezy.com/system/resources/thumbnails/009/292/244/small/default-avatar-icon-of-social-media-user-vector.jpg'); background-size: cover; background-position: center;"></a>
+      <div id="login-popup" style="display: none; position: absolute; top: 60px; right: 0; background: white; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); padding: 1em; border-radius: 8px; z-index: 1500;">
+          <form method="POST" action="/login">
+              <div class="input-field">
+                  <input placeholder="username" value="bob" name="username" type="text" class="validate" required>
+                  <label for="username" style="font-family: Arial, sans-serif !important;">Username</label>
+              </div>
+              <div class="input-field">
+                  <input placeholder="password" value="bobpass" name="password" type="password" class="validate" required>
+                  <label for="password" style="font-family: Arial, sans-serif !important;">Password</label>
+              </div>
+              <button type="submit" class="btn waves-effect waves-light">Login</button>
+          </form>
+      </div>
+    </div>
+    {% endif %}
+  
+  <script>
+      const loginIcon = document.getElementById('login-icon');
+      const loginPopup = document.getElementById('login-popup');
+      if(loginIcon){
+        loginIcon.addEventListener('click', () => {
+            loginPopup.style.display = loginPopup.style.display === 'none' ? 'block' : 'none';
+        });
+        document.addEventListener('click', (e) => {
+            if (!loginPopup.contains(e.target) && e.target !== loginIcon) {
+                loginPopup.style.display = 'none';
+            }
+        });
+      }
+  </script>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Bungee+Spice&family=Pridi:wght@200;300;400;500;600;700&display=swap');
 
@@ -89,64 +127,72 @@
             transform: scale(1.05);
             bottom: 2.6em;
             left: 0.1em;
-          }
+        }
 
-          .leaflet-layerstree-opened{
-            font-size: 30px;
-            margin-right: 5px;
-          }
+        .leaflet-layerstree-opened{
+          font-size: 30px;
+          margin-right: 5px;
+        }
+        .leaflet-layerstree-closed{
+          font-size: 30px;
+          margin-right: 5px;
+        }
+        
+        .leaflet-layerstree-header-name{
+          font-size: 15px;
+        }
 
-          .leaflet-layerstree-closed{
-            font-size: 30px;
-            margin-right: 5px;
-          }
-          
-          .leaflet-layerstree-header-name{
-            font-size: 15px;
-          }
+        .leaflet-control-layers {
+          pointer-events: auto;
+        }
+        
+        .leaflet-control-layers:not(.leaflet-control-layers-expanded) .leaflet-control-layers-list {
+          display: none;
+        }
+    
+        .bungee-spice-regular {
+            font-family: "Bungee Spice", sans-serif;
+            font-weight: 400;
+            font-style: normal;
+        }
+      
+        .pridi-semibold {
+            font-family: "Pridi", serif;
+            font-weight: 600;
+            font-style: normal;
+        }
+      
+        label {
+            font-family: "Bungee Spice", sans-serif;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+      
+        .btn-floating.transparent {
+            box-shadow: none;
+        }
+      
+        .leaflet-control-layers .leaflet-control-layers-list label {
+            font-family: "Pridi", serif;
+            font-weight: 400;
+            font-size: 1em;
+            color: #333;
+        }
+      
+        .leaflet-draw-toolbar {
+            margin-top: 0.6em;
+        }
 
-          .leaflet-control-layers {
-            pointer-events: auto;
-          }
-          
-          .leaflet-control-layers:not(.leaflet-control-layers-expanded) .leaflet-control-layers-list {
-            display: none;
-          }
-        
+        .crop-box {
+          width: 300px;
+          height: 200px;
+          overflow: hidden;
+        }
 
-          .bungee-spice-regular {
-              font-family: "Bungee Spice", sans-serif;
-              font-weight: 400;
-              font-style: normal;
-          }
-        
-          .pridi-semibold {
-              font-family: "Pridi", serif;
-              font-weight: 600;
-              font-style: normal;
-          }
-        
-          label {
-              font-family: "Bungee Spice", sans-serif;
-              font-weight: bold;
-              font-size: 1.2em;
-          }
-        
-          .btn-floating.transparent {
-              box-shadow: none;
-          }
-        
-          
-          .leaflet-control-layers .leaflet-control-layers-list label {
-              font-family: "Pridi", serif;
-              font-weight: 400;
-              font-size: 1em;
-              color: #333;
-          }
-        
-          .leaflet-draw-toolbar {
-              margin-top: 0.6em;
-          }
+        .full-img {
+          width: 100%;
+          height: auto;
+        }
     </style>
     <div id="content">{% block content %}{% endblock %}</div>
     <script>

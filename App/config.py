@@ -8,7 +8,7 @@ def load_config(app, overrides):
         app.config.from_object('App.custom_config')
     else:
         config = {'ENV': os.environ.get('ENV', 'DEVELOPMENT')}
-        delta = 7
+        delta = 10
         if config['ENV'] == "PRODUCTION":
             app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("SQLALCHEMY_DATABASE_URI")
             app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")

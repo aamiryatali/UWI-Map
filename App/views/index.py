@@ -1,10 +1,10 @@
 import urllib.request
 from flask import Blueprint, redirect, render_template, request, send_from_directory, jsonify, current_app, flash, url_for
-from flask_jwt_extended import jwt_required, current_user as jwt_current_user
+from flask_jwt_extended import jwt_required, create_access_token, set_access_cookies, current_user as jwt_current_user
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from App.controllers import create_user, initialize, create_building, get_marker, get_building
-from App.models import db, Marker, Building, Faculty
+from App.models import db, Marker, Building, Faculty, User
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import HTTPException
 import os
@@ -37,7 +37,7 @@ def index_page():
     markers = Marker.query.all()
     buildings = Building.query.all()
     faculties = Faculty.query.all()
-    return render_template('index.html', markers=markers, buildings=buildings, faculties=faculties)
+    return render_template('guestIndex.html', markers=markers, buildings=buildings, faculties=faculties)
 
 @index_views.route('/get-data', methods=['GET'])
 def get_data():
@@ -53,6 +53,7 @@ def get_data():
 
     
 @index_views.route('/init', methods=['GET'])
+@jwt_required()
 def init():
     if os.environ.get("ENV") == "PRODUCTION":
         flash('Server is currently running in production mode, initialize blocked')
@@ -71,6 +72,7 @@ def health_check():
     return jsonify({'status':'healthy'})
 
 @index_views.route('/addMarker', methods=['POST'])
+@jwt_required()
 def add_marker():
     data = request.form
     if get_marker(data['markerName']):
@@ -92,6 +94,7 @@ def add_marker():
     return jsonify({'error': 'Building does not exist!'}), 400
 
 @index_views.route('/editMarker/<id>', methods=['POST'])
+@jwt_required()
 def edit_marker(id):
     marker = Marker.query.get(id)
     if not marker:
@@ -122,6 +125,7 @@ def edit_marker(id):
     return jsonify({'success' : "Marker information updated!"}), 200
     
 @index_views.route('/deleteMarker/<id>')
+@jwt_required()
 def delete_marker(id):
     #This could also probably be moved to a model function
     marker = Marker.query.get(id)
@@ -129,9 +133,10 @@ def delete_marker(id):
         return jsonify({'error': "Marker does not exist"}), 400
     db.session.delete(marker)
     db.session.commit()
-    return jsonify({'success' : "Marker information updated!"}), 200
+    return jsonify({'success' : "Marker successfully deleted!"}), 200
 
 @index_views.route('/addBuilding', methods=['POST'])
+@jwt_required()
 def addBuilding():
     data = request.form
     if get_building(data['buildingName']):
@@ -154,6 +159,7 @@ def addBuilding():
     return jsonify({'success': 'Building successfully added'}), 200
 
 @index_views.route('/editBuilding/<id>', methods=['POST'])
+@jwt_required()
 def editBuilding(id):
     building = Building.query.get(id)
     if not building:
@@ -180,6 +186,7 @@ def editBuilding(id):
     return jsonify({'success' : 'Building information updated'}), 200
     
 @index_views.route('/deleteBuilding/<id>')
+@jwt_required()
 def deleteBuilding(id):
     #This could also probably be moved to a model function
     building = Building.query.get(id)
@@ -196,6 +203,6 @@ def deleteBuilding(id):
     db.session.delete(building)
     db.session.commit()
     return jsonify({'success': 'Building successfully deleted'}), 200
-    
+
 
 

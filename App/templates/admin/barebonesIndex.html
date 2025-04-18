@@ -14,6 +14,13 @@
 {% endblock %}
 
 {% block code %}
+    <style>
+        .leaflet-control-layers {
+            transform: scale(1.05);
+            bottom: 1em;
+            left: 0.1em;
+          }
+    </style>
     <script type="text/javascript">
         var map = L.map('map').setView([10.642529, -61.400225], 13); // Sets the initial map position and zoom level
         var markers;
@@ -23,33 +30,9 @@
         var drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
 
-        var drawControl = new L.Control.Draw({
-            position: 'bottomright',
-            draw: {
-                circle: false,
-                polyline: false
-            },
-            edit: {
-                featureGroup: drawnItems,
-                edit: false,
-                remove: false
-            }
-        });
-
-        L.control.locate({
-            position: 'bottomright',
-            strings: {
-                title: "Pan to current location"
-            },
-            keepCurrentZoomLevel: true
-        }).addTo(map);
-
-        //var marker = L.marker([10.6464474, -61.4008066]).addTo(map);
-        //marker.on('click', onMarkerClick);
         var mode = 'view';
         var currentMarker;
         var currentBuilding;
-        var previousDrawing = null;
         var drawingLayer = L.geoJSON().addTo(map)
         var markerLayer = L.layerGroup();
 
@@ -220,197 +203,8 @@
         loadView();
         
         map.doubleClickZoom.disable();
-        map.addControl(drawControl);
-        
-        map.on('click', onMapClick);
-        map.on(L.Draw.Event.CREATED, function(e){
-            var layer = e.layer;
-            var type = e.layerType;
-            drawnItems.addLayer(layer);
-
-            //If the drawn item was a marker
-            if(type === 'marker'){
-                closeContainer();
-                currentMarker = layer;
-                let pane = document.querySelector('#pane');
-                if (pane.innerHTML.trim() === '') {
-                    //Form for adding markers
-                    let html = `
-    <div class="row" id="addMarkerForm">
-        <div class="col s12">
-        <button style="float: right; background: none; border: none; font-size: 1.5em; cursor: pointer;" onclick="cancelAdd()">×</button>
-            <form action="/addMarker" method="POST" enctype="multipart/form-data" style='padding:2em;'>
-                <div class="row">
-                    <div class="input-field col s12">
-                        <label for="markerName" style="position:static;">Name</label>
-                        <input placeholder="eg. FST 114" id="markerName" name="markerName" type="text" class="validate" required>
-                    </div>
-                    <div class="input-field col s12">
-                        <label for="floorNum" style="position:static;">Floor #</label>
-                        <input placeholder="eg. 0" id="floorNum" name="floorNum" type="number" min="0" max="6" step="1" class="validate" required>
-                    </div>
-                    <div class="input-field col s12">
-                        <label for="buildingName" style="position:static;">Building</label>
-                        <select name="buildingChoice" id="buildingChoice" style="display:static;" required>
-                    `;
-                    //Populates the select with all the buildings
-                    for(building of buildings){
-                        if(building['id'] == 1){
-                            html += `<option value="1" selected>N/A</option>`
-                        } else {
-                            html += `<option value="${building['id']}">${building['name']}</option>`
-                        }    
-                    }
-
-                    html += `
-                    </select>
-                    </div>
-                    <div class="input-field col s12">
-                        <label for="description" style="position:static;">Description (Optional)</label>
-                        <textarea class="materialize-textarea" placeholder="eg. Located on right of south entrance" name="description" id="description" rows="4" cols="12"></textarea>
-                    </div>
-
-                    <div class="input-field col s12">
-                            <label for="imageUpload" style="position:static">Upload Image (Optional)</label>
-                    </div>
-                    <div class="file-field input-field col s12">
-                        <div class="btn-small blue">
-                            <span><i class="material-icons">file_upload</i></span>
-                            <input type="file" name="imageUpload" id="imageUpload" accept="image/*">
-                        </div>
-                        <div class="file-path-wrapper">
-                            <input class="file-path validate" type="text">
-                        </div>
-                    </div>
-                    
-                    <input type="hidden" name="x" id="x" value="${layer.getLatLng().lat}">
-                    <input type="hidden" name="y" id="y" value="${layer.getLatLng().lng}">
-                    <div class="input-field col s12">
-                      <button class="waves-effect waves-light btn" type="submit">Add Marker</button>
-                      <input class="waves-effect waves-light white btn black-text" type="button" value="Cancel" onclick="cancelAdd()">   
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>`;
-                pane.innerHTML = html;
-                pane.style.left = '10px';
-                document.getElementById('addMarkerForm').addEventListener('submit', addMarker);
-                //Materialize select fields need these 2 lines to of code to actually initialize the options for some reson
-                var elems = document.querySelectorAll('select');
-                var instances = M.FormSelect.init(elems);
-                }
-            }
-
-            //If it was a building i.e. a shape:
-            if(type === 'polygon' || type === 'circle' || type === 'rectangle'){
-                var geoJSON = layer.toGeoJSON();
-                geoJSONString = JSON.stringify(geoJSON);
-                console.log(geoJSONString)
-                if(mode === "redraw"){ //Check if this is a new building, or re-drawing a previous one.
-                    if(currentBuilding != null && currentBuilding != undefined){
-                        if(previousDrawing != null){
-                            drawnItems.removeLayer(previousDrawing);
-                        }    
-                        previousDrawing = layer;
-                        let field = document.querySelector('#newDrawingCoords');
-                        field.value = geoJSONString;
-                    }
-                    currentBuilding = layer;
-                    return;
-                }
-                closeContainer();
-                currentBuilding = layer;
-                let pane = document.querySelector('#pane');
-                let html = `
-                <div class="row" id="addBuildingForm">
-        <div class="col s12">
-        <button style="float: right; background: none; border: none; font-size: 1.5em; cursor: pointer;" onclick="cancelAdd()">×</button>
-            <form action="/addBuilding" enctype="multipart/form-data" method="POST" style='padding:2em;'>
-                <div class="row">
-                    <div class="input-field col s12">
-                        <label for="buildingName" style="position:static;">Building Name</label>
-                        <input placeholder="egs. ENG Block 7, TCB #2" id="buildingName" name="buildingName" type="text" class="validate" required>
-                    </div>
-                    <div class="input-field col s12">
-                        <label for="facultyName" style="position:static;">Faculty</label>
-                        <select name="facultyChoice" id="facultyChoice" style="display:static;" required>
-                            <option value="" disabled selected>Choose a faculty</option>
-                    `;
-                    //Populates the select with all the faculties
-                    for(faculty of faculties){
-                        html += `
-                            <option value="${faculty['id']}">${faculty['abbr']} - ${faculty['name']}</option>
-                        `
-                    }
-
-                    html += `
-                        </select>
-                    </div>
-                    <div class="input-field col s12">
-                        <label for="imageUpload" style="position:static;">Upload Image (Optional)</label>
-                    </div>
-                    <div class="file-field input-field col s12">
-                        <div class="btn-small blue">
-                            <span><i class="material-icons">file_upload</i></span>
-                            <input type="file" name="imageUpload" id="imageUpload" accept="image/*">
-                        </div>
-                        <div class="file-path-wrapper">
-                            <input class="file-path validate" type="text">
-                        </div>
-                    </div>
-
-                    <input type="hidden" name="geoJSON" id="geoJSON" value='${geoJSONString}'>                    
-                      <button class="waves-effect waves-light btn" type="submit">Add Building</button>
-                      <input class="waves-effect waves-light white btn black-text right" type="button" value="Cancel" onclick="closeContainer()">   
-                </div>
-            </form>
-        </div>
-    </div>`
-                pane.innerHTML = html;
-                pane.style.left = '10px';
-                document.getElementById('addBuildingForm').addEventListener('submit', addBuilding);
-
-                //Materialize select fields need these 2 lines to of code to actually initialize the options for some reson
-                var elems = document.querySelectorAll('select');
-                var instances = M.FormSelect.init(elems);
-            }
-            removeUnhideButton(); // Remove unhide button
-        });
-
         // Move zoom controls under the layer control toggle, with some CSS styling done in <style>
         map.zoomControl.setPosition('bottomright');
-
-        async function addMarker(event){
-            event.preventDefault();
-            let form = event.target.elements;
-            let formData = new FormData(event.target);
-            
-            let response = await fetch('/addMarker', {
-                method: 'POST',
-                body: formData
-            });
-            let result = await response.json()
-            if('error' in result){
-                toast(result['error']);
-            } else {
-                toast(result['success']);
-                event.target.reset();
-                closeContainer();
-                loadView();
-            }
-        }
-
-        //Just closes the pane and removes the marker that was initially put down when adding a marker. May be modified to also remove cancelled buildings.
-        function cancelAdd(){
-            if(currentMarker != null && currentMarker != undefined){
-                map.removeLayer(currentMarker);
-            }
-            if(currentBuilding != null && currentBuilding != undefined){
-                drawnItems.removeLayer(currentBuilding);
-            }
-            closeContainer();
-        }
 
         //Alot goes on here. 
         function addObjects(markers, buildings, faculties){
@@ -619,7 +413,6 @@
                     <i class="material-icons">exit_to_app</i>
                 </button>
             </div>
-            <form method="POST" enctype="multipart/form-data" action="/editBuilding/${building.id}">
             <div>`;
             if (building.image != '') {
                 html += `
@@ -636,10 +429,6 @@
                     <h6 style="font-family: 'Bungee Spice', cursive">Faculty</h6>
                     <p style="font-family: 'Pridi', cursive">${building.facultylong}</p>
                 </div>
-                <div name="buildingInfoFormButtons" id="buildingInfoFormButtons" class="card-action" style="position:static;">
-                    <input type="button" onclick="editBuildingView()" class="waves-effect waves-light orange btn" value="Edit">
-                    <button type="button" onclick="deleteBuilding(${building.id})" class="waves-effect waves-light red btn">Delete</button>
-                </div>
             </div>
             </form>
         </div>
@@ -647,137 +436,12 @@
             pane.innerHTML = html;
             pane.style.left = '10px';
 
-            
-            document.getElementById('editBuildingForm').addEventListener('submit', editBuilding);
             // Initialize Materialboxed for the image
             var elems = document.querySelectorAll('.materialboxed');
             var instances = M.Materialbox.init(elems);
             removeUnhideButton(); // Remove unhide button
         }
 
-        async function editBuilding(event){
-            event.preventDefault();
-            let form = event.target.elements;
-            let formData = new FormData(event.target);
-            let response = await fetch(`${event.target.action}`, {
-                method: 'POST',
-                body: formData
-            });
-
-            let result = await response.json()
-            if('error' in result){
-                toast(result['error']);
-            } else {
-                toast(result['success']);
-                closeContainer();
-                event.target.reset();
-                loadView();
-            }
-        }
-
-        //Brings up the edit form for buildings
-        function editBuildingView(){
-            let infoPane = document.querySelector('#buildingInfoForm');
-            if(infoPane != undefined){
-                html = `
-                    <div class="input-field col s12">
-                        <label for="markerName" style="position:static;">Name</label>
-                        <input value="${currentBuilding.name}" id="buildingName" name="buildingName" type="text" class="validate" required>
-                    </div>
-                    <div class="input-field col s12">
-                        <label for="facultyChoice" style="position:static;">Faculty</label>
-                        <select name="facultyChoice" id="facultyChoice" style="display:static;">
-                            
-                    `;
-                    for(faculty of faculties){
-                        if(faculty['abbr'] != currentBuilding.faculty){
-                            html += `
-                               <option value="${faculty['id']}">${faculty['abbr']} - ${faculty['name']}</option>
-                            `
-                        } else {
-                            html += `
-                            <option value="${faculty['id']}" selected>${faculty['abbr']} - ${faculty['name']}</option>
-                            `
-                        }
-                    }
-                    html += `
-                        </select>
-                    </div>
-
-                    <div>
-                        <button class="waves-effect waves-light blue btn" type="button" onclick="reDraw()">Re-draw</button>
-                        <div id="reDrawTooltip" name="reDrawTooltip"></div>
-                        <input type="hidden" id="newDrawingCoords" name="newDrawingCoords" value="">
-                    </div>
-
-                    <div class="input-field col s12">
-                        <label for="imageUpload" style="position:static">Change Image</label>
-                    </div>
-                    <div class="file-field col s12">
-                        <div class="btn-small blue">
-                            <span><i class="material-icons">file_upload</i></span>
-                            <input type="file" name="imageUpload" id="imageUpload" accept="image/*">
-                        </div>
-                        <div class="file-path-wrapper">
-                            <input class="file-path validate" type="text" value="${currentBuilding.image}">
-                        </div>
-                    </div> 
-
-                `;
-                infoPane.innerHTML = html;
-                //Have to initialize select options once again
-                var elems = document.querySelectorAll('select');
-                var instances = M.FormSelect.init(elems);
-
-                //This code replaces the button with the real button to actually submit the form
-                var buttons = document.querySelector('#buildingInfoFormButtons');
-                if (buttons != undefined) {
-                    buttons.innerHTML = `
-                      <button class="waves-effect waves-light orange btn" type="submit">Update Building</button>
-                      <input class="waves-effect waves-light white btn black-text" type="button" value="Cancel" onclick="closeContainer()">    
-                      <button class="waves-effect waves-light blue btn" type="button" onclick="hideInformation()">Hide Information</button>
-                    `;
-                }
-            }
-            removeUnhideButton(); // Remove unhide button
-        }
-
-        async function addBuilding(event){
-            event.preventDefault();
-            let form = event.target.elements;
-            let formData = new FormData(event.target);
-            
-            let response = await fetch('/addBuilding', {
-                method: 'POST',
-                body: formData
-            });
-
-            let result = await response.json()
-
-            if('error' in result){
-                toast(result['error']);
-            } else {
-                toast(result['success']);
-                event.target.reset();
-                closeContainer();
-                loadView();
-            }
-        }
-
-        function reDraw(){
-            //Whenever a new drawing is made, "mode" is checked. If it is "redraw", then creating a drawing updates the currently 
-            //selected building's drawing coordinates instead of bringing up the Add New Building form.
-            mode = "redraw";
-            let tip = document.querySelector('#reDrawTooltip');
-            tip.innerHTML = '<h6>Draw a new shape with the toolbar!</h6>'
-        }
-
-        function onEachFeature(feature, layer) {
-            if (feature.properties && feature.properties.popupContent) {
-                layer.bindPopup(feature.properties.popupContent);
-            }
-        }
-        
         function onMarkerClick(e){
             marker = e.target
             currentMarker = marker;
@@ -789,21 +453,22 @@
             //The delete button is also here, but since a form can't send both a POST and a GET request to 2 differnet routes, the delete button just
             //calls a JS function thats sends a GET request to the deleteMarker route.
             let html = `
-    <div class="row" id='editMarkerForm' name='editMarkerForm'>
+    <div class="row" id='markerInfo' name='markerInfo'>
         <div class="col s12">
         <div class ="col s12" style="background-color: #d4edda;">
 	        <p style="font-family: 'Pridi', cursive">Marker Information</p>
         </div>
-            <form method="POST" action="/editMarker/${marker.data.id}" enctype="multipart/form-data">
             <div>`
             //Only add the image if one exists for the current marker
             if(marker.data.image != ''){
                 html += `
-                <div class="card-image crop-box">
+                <div class="card-image">
                     <button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
                         <i class="material-icons">exit_to_app</i>
                     </button>
-                    <img class="materialboxed full-img" src="${marker.data.image}" height="200" style="border-radius: 0; object-fit:cover; object-position: 20% 10%;">
+                    <div class="crop-box">
+                        <img class="materialboxed full-img" src=${marker.data.image}>
+                    /div>
                 </div>
                 `
 
@@ -830,10 +495,6 @@
                     }
                     
                 html += `</div>
-                <div name="markerInfoFormButtons" id="markerInfoFormButtons" class="card-action" style="position:static;">
-                    <input type="button" onclick="editMarkerView()" class="waves-effect waves-light orange btn" value="Edit" style="font-family: 'Pridi', cursive">
-                    <button type="button" onclick="deleteMarker(${marker.data.id})" class="waves-effect waves-light red btn right" style="font-family: 'Pridi', cursive">Delete</button>
-                </div>
             </div>
             </form>
         </div>
@@ -841,7 +502,6 @@
             `;
             pane.innerHTML = html;
             pane.style.left = '10px';
-            document.getElementById('editMarkerForm').addEventListener('submit', editMarker);
             // Initialize Materialboxed for the image
             var elems = document.querySelectorAll('.materialboxed');
             var instances = M.Materialbox.init(elems, {
@@ -853,141 +513,6 @@
                     }
                 }
             });
-            removeUnhideButton(); // Remove unhide button
-        }
-        
-        async function editMarker(event){
-            event.preventDefault();
-            let form = event.target.elements;
-            let formData = new FormData(event.target);
-            let response = await fetch(`${event.target.action}`, {
-                method: 'POST',
-                body: formData
-            });
-
-            let result = await response.json()
-            if('error' in result){
-                toast(result['error']);
-            } else {
-                toast(result['success']);
-                closeContainer();
-                event.target.reset();
-                loadView();
-            }
-        }
-        
-        //"Manually" sends a GET request to /deleteMarker
-        async function deleteMarker(id){
-            let response = await fetch(`/deleteMarker/${id}`);
-
-            let result = await response.json()
-            if('error' in result){
-                toast(result['error']);
-            } else {
-                toast(result['success']);
-                closeContainer();
-                loadView();
-            }
-        }
-
-        async function deleteBuilding(id){
-            let response = await fetch(`/deleteBuilding/${id}`);
-
-            let result = await response.json()
-            if('error' in result){
-                toast(result['error']);
-            } else {
-                toast(result['success']);
-                closeContainer();
-            };
-            loadView();
-        }
-
-        //If the edit button is clicked, then this function is what actually "makes" all the fields in the form editable and adds the real submit button
-        function editMarkerView(){
-            let infoPane = document.querySelector('#markerInfoForm');
-            if(infoPane != undefined){
-                html = `
-                    <div class="input-field col s12">
-                        <label for="markerName" style="position:static;">Name</label>
-                        <input value="${currentMarker.data.name}" id="markerName" name="markerName" type="text" class="validate" required>
-                    </div>
-                    <div class="input-field col s12">
-                        <label for="floorNum" style="position:static;">Floor #</label>
-                        <input value="${currentMarker.data.floor}" id="floorNum" name="floorNum" type="number" min="0" max="6" step="1" class="validate" required>
-                    </div>
-                    <div class="input-field col s12">
-                        <label for="buildingName" style="position:static;">Building Name</label>
-                        <select name="buildingChoice" id="buildingChoice" style="display:static;">
-                    `;
-                    for(building of buildings){
-                        if(building['name'] != currentMarker.data.buildingName){
-                            html += `
-                               <option value="${building['id']}">${building['name']}</option>
-                            `
-                        } else {
-                            html += `
-                               <option value="${building['id']}" selected>${building['name']}</option>
-                            `
-                        }
-                    }
-                    html += `
-                        </select>
-                    </div>
-                    <div class="input-field col s12">
-                        <label for="description" style="position:static;">Description (Optional)</label>
-                        <textarea class="materialize-textarea" name="description" id="description" rows="4" cols="12">${currentMarker.data.description}</textarea>
-                    </div>
-                    <div class="input-field col s12">
-                        <label for="coords" style="position:static;">Current coordinates</label>
-                        <div id="coords" name="coords">
-                            <span style="white-space:nowrap">
-                                <label for="x">X:  </label>
-                                <input type="text" name="x" id="x" value="${currentMarker.getLatLng().lat}">
-                            </span>
-                            <span style="white-space:nowrap">
-                                <label for="y">Y:  </label>
-                                <input type="text" name="y" id="y" value="${currentMarker.getLatLng().lng}">
-                            </span>
-                            <sub style="color: grey;">(Drag marker to new location)</sub>
-                        </div>
-                    </div>
-                        
-                    <div class="input-field col s12">
-                        <label for="imageUpload" style="position:static">Change Image</label>
-                    </div>
-                    <div class="file-field col s12">
-                        <div class="btn-small blue">
-                            <span><i class="material-icons">file_upload</i></span>
-                            <input type="file" name="imageUpload" id="imageUpload" accept="image/*">
-                        </div>
-                        <div class="file-path-wrapper">
-                            <input class="file-path validate" type="text" value="${currentMarker.data.image}">
-                        </div>
-                    </div> 
-                `;
-                infoPane.innerHTML = html;
-                currentMarker.dragging.enable();
-                currentMarker.on('dragend', function(){
-                    x = document.querySelector('#x');
-                    y = document.querySelector('#y');
-                    x.value = currentMarker.getLatLng().lat;
-                    y.value = currentMarker.getLatLng().lng;
-                })
-                //Have to initialize select options once again
-                var elems = document.querySelectorAll('select');
-                var instances = M.FormSelect.init(elems);
-
-                //This code replaces the button with the real button to actually submit the form
-                var buttons = document.querySelector('#markerInfoFormButtons');
-                if(buttons != undefined){
-                    buttons.innerHTML = `
-                      <button class="waves-effect waves-light orange btn" type="submit">Update Marker</button>
-                      <input class="waves-effect waves-light white btn black-text" type="button" value="Cancel" onclick="closeContainer(${currentMarker.getLatLng().lat}, ${currentMarker.getLatLng().lng})">    
-                      <button class="waves-effect waves-light blue btn" type="button" onclick="hideInformation()">Hide Information</button>
-                    `;
-                }
-            }
             removeUnhideButton(); // Remove unhide button
         }
 
@@ -1013,8 +538,7 @@
 
         //All functions moved to separate functions. This function remains empty for now.
         function onMapClick(e){
-            //I used to be very long
-            
+            //I used to be very long 
         }
 
         //This function isn't called in the current state of the website, but may be used/expanded later.

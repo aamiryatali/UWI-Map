@@ -8,7 +8,7 @@ def initialize():
     db.drop_all()
     db.create_all()
     create_user('bob', 'bobpass')
-    building = create_building("N/A", 10, '{"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[[-61.422607,10.641827],[-61.422607,10.641838],[-61.422554,10.641838],[-61.422554,10.641827],[-61.422607,10.641827]]]}}')
+    building = create_building("N/A", 10, '{"type":"Feature","properties":{},"geometry":{"type":"Polygon","coordinates":[[[-61.57974,10.638609],[-61.57974,10.63901],[-61.579182,10.63901],[-61.579182,10.638609],[-61.57974,10.638609]]]}}')
     eng = create_faculty('Faculty of Engineering', "ENG")
     fst = create_faculty('Faculty of Science & Technology', "FST")
     fhe = create_faculty('Faculty of Humanities & Education', "FHE")
