@@ -37,7 +37,6 @@ def get_data():
 
     
 @index_views.route('/init', methods=['GET'])
-@jwt_required()
 def init():
     if os.environ.get("ENV") == "PRODUCTION":
         flash('Server is currently running in production mode, initialize blocked')
@@ -64,7 +63,6 @@ def addMarker():
     result = add_marker(data, imageFile)
     return result
     
-
 @index_views.route('/editMarker/<id>', methods=['POST'])
 @jwt_required()
 def editMarker(id):
