@@ -28,7 +28,7 @@
     {% endif %}
     <div class="input-field" style="position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 900; width: 300px;">
       <input type="text" id="marker-search" class="autocomplete" placeholder="Search for a marker">
-      <button id="clear-search" class="btn-flat" type="button" style="position: absolute; right: 0; top: 0; height: 100%; color: #999; font-size: 1.2em;">✕</button>
+      <button id="clear-search" class="btn-flat" type="button">✕</button>
     </div>
 
     <style>
@@ -153,6 +153,26 @@
         
           .leaflet-draw-toolbar {
               margin-top: 0.6em;
+          }
+
+          #marker-search::placeholder {
+            color: teal;
+            opacity: 0.85;
+          }
+
+          #marker-search {
+            border-bottom: 1.5px solid teal;
+            opacity: 0.6;
+          }
+
+          #clear-search {
+            position: absolute;
+            right: 0;
+            top: 0;
+            height: 100%;
+            color: teal;
+            opacity: 0.6;
+            font-size: 1.2em;
           }
     </style>
     <div id="content">{% block content %}{% endblock %}</div>
