@@ -1,10 +1,8 @@
 from App.models import Building
 from App.database import db
-from .marker import upload_file, allowed_file
+from .marker import upload_file, get_clean_path_from_url, SUPABASE_BUCKET, supabase
 from sqlalchemy.exc import IntegrityError
-from werkzeug.utils import secure_filename
 from flask import jsonify, current_app
-import os
 
 def create_building(name, facultyID, drawingCoords):
     newBuilding = Building(name=name, facultyID=facultyID, drawingCoords=drawingCoords)
@@ -38,7 +36,7 @@ def add_building(data, imageFile):
         if imageFile:
             secureFilename = upload_file(imageFile)
             if secureFilename:
-                building.addImage("static/images/" + secureFilename)
+                building.addImage(secureFilename)
     return jsonify({'success': 'Building successfully added'}), 200
 
 def edit_building(id, data, imageFile):
@@ -50,9 +48,18 @@ def edit_building(id, data, imageFile):
     building.facultyID = data['facultyChoice']
     if data['newDrawingCoords'] != "":
         building.drawingCoords = data['newDrawingCoords']
+        
     if imageFile:
-            secureFilename = upload_file(imageFile)
-            building.addImage("static/images/" + secureFilename)
+        if building.image != '':
+            filename = building.image
+            path = get_clean_path_from_url(filename)
+            result = supabase.storage.from_(SUPABASE_BUCKET).remove([path])
+            if not result:
+                db.session.rollback()
+                return jsonify({'error': "Could not delete image associated"}), 400
+        secureFilename = upload_file(imageFile)
+        building.addImage(secureFilename)
+        
     try:
         db.session.add(building)
         db.session.commit()
@@ -70,6 +77,14 @@ def delete_building(id):
     if not building:
         return jsonify({'error' : 'Building does not exist'}), 400
 
+    if building.image != '':
+        filename = building.image
+        path = get_clean_path_from_url(filename)
+        result = supabase.storage.from_(SUPABASE_BUCKET).remove([path])
+        if not result:
+            db.session.rollback()
+            return jsonify({'error': "Could not delete image associated"}), 400
+        
     for marker in building.markers:
         marker.buildingID = 1
         default.addMarker(marker.x, marker.y, marker.name, marker.floor, marker.description)

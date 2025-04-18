@@ -335,6 +335,9 @@
 
             //If it was a building i.e. a shape:
             if(type === 'polygon' || type === 'circle' || type === 'rectangle'){
+                if(currentMarker){
+                    drawnItems.removeLayer(currentMarker);
+                }
                 var geoJSON = layer.toGeoJSON();
                 geoJSONString = JSON.stringify(geoJSON);
                 console.log(geoJSONString)
@@ -655,6 +658,20 @@
 
         // Brings up the building info pane on double click
         function onBuildingClick(e) {
+            if(currentBuilding){
+                drawnItems.removeLayer(currentBuilding);
+            }
+            if(currentMarker){
+                drawnItems.removeLayer(currentMarker);
+            }
+
+            mode = 'view';
+            if(currentMarker){ //Disables dragging on the current marker if it was enabled before.
+                if(currentMarker.dragging){
+                    currentMarker.dragging.disable();
+                }
+            }
+
             currentBuilding = e.target.feature.properties; // Ensure currentBuilding is set correctly
             let pane = document.querySelector('#pane');
             let building = currentBuilding; // Use currentBuilding for consistency
@@ -827,6 +844,11 @@
         }
         
         function onMarkerClick(e){
+            if(currentBuilding){
+                drawnItems.removeLayer(currentBuilding);
+            }
+
+            mode = 'view'
             marker = e.target
             currentMarker = marker;
             let pane = document.querySelector('#pane');

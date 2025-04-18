@@ -398,6 +398,7 @@
         clearBtn.addEventListener('click', function () {
             searchInput.value = '';
             filterMarkers("none", "all"); //Reshow all markers
+            recenterMap();
         });
 
         // Brings up the building info pane on double click
