@@ -26,9 +26,9 @@
     {% if not is_authenticated %}
     
     {% endif %}
-    <div class="input-field" style="position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 1100; width: 300px;">
+    <div class="input-field" style="position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 900; width: 300px;">
       <input type="text" id="marker-search" class="autocomplete" placeholder="Search for a marker">
-      <button id="clear-search" class="btn-flat" type="button" style="position: absolute; right: 0; top: 0; height: 100%; color: #999; font-size: 1.2em;">✕</button>
+      <button id="clear-search" class="btn-flat" type="button">✕</button>
     </div>
     {% if is_authenticated %}
     <div style="position: fixed; top: 10px; right: 6px; z-index: 900;">
@@ -125,7 +125,7 @@
 
         .leaflet-control-layers {
             transform: scale(1.05);
-            bottom: 2.6em;
+            bottom: 2.2em;
             left: 0.1em;
         }
 
@@ -183,6 +183,7 @@
             margin-top: 0.6em;
         }
 
+<<<<<<< HEAD
         .crop-box {
           width: 300px;
           height: 200px;
@@ -193,6 +194,100 @@
           width: 100%;
           height: auto;
         }
+=======
+          .leaflet-control-layers {
+            pointer-events: auto;
+          }
+          
+          .leaflet-control-layers:not(.leaflet-control-layers-expanded) .leaflet-control-layers-list {
+            display: none;
+          }
+
+          .leaflet-control-layers-expanded {
+            position: absolute !important;
+            z-index: 1000;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0px 4px 8px rgba(0,0,0,0.3);
+          }
+
+          .bungee-spice-regular {
+              font-family: "Bungee Spice", sans-serif;
+              font-weight: 400;
+              font-style: normal;
+          }
+        
+          .pridi-semibold {
+              font-family: "Pridi", serif;
+              font-weight: 600;
+              font-style: normal;
+          }
+        
+          label {
+              font-family: "Bungee Spice", sans-serif;
+              font-weight: bold;
+              font-size: 1.2em;
+          }
+        
+          .btn-floating.transparent {
+              box-shadow: none;
+          }
+        
+          
+          .leaflet-control-layers .leaflet-control-layers-list label {
+              font-family: "Pridi", serif;
+              font-weight: 400;
+              font-size: 1em;
+              color: #333;
+          }
+        
+          .leaflet-draw-toolbar {
+              margin-top: 0.6em;
+          }
+
+          #marker-search::placeholder {
+            color: teal;
+            opacity: 0.85;
+          }
+
+          #marker-search {
+            border-bottom: 1.5px solid teal;
+            opacity: 0.6;
+          }
+
+          .leaflet-control-recenter {
+            background-color: white;
+            bottom: 2.4em;
+            right: -0.23em;
+            width: 50px;
+            height: 50px;
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: none;
+            cursor: pointer;
+            border: 3px solid rgb(197, 196, 196); /* Added gray border */
+          }
+
+          #clear-search {
+            position: absolute;
+            right: 0;
+            top: 0;
+            height: 100%;
+            color: teal;
+            opacity: 0.6;
+            font-size: 1.2em;
+          }
+
+          #toast-container {
+            top: 20px;
+            bottom: auto;
+            right: 50%;
+            transform: translateX(50%);
+            z-index: 9999;
+          }
+>>>>>>> 0e656bd8a749371e85b27fb18e2ddffe785b0df4
     </style>
     <div id="content">{% block content %}{% endblock %}</div>
     <script>
