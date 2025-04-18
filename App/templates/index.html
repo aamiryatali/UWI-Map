@@ -534,8 +534,8 @@
 
         
         //Prepare and sort marker names
-        const markerNames = {};
-        const namesArray = [];
+        markerNames = {};
+        namesArray = [];
 
         function searchFunctionality(){
             markerLayer.eachLayer(function(layer) {
@@ -552,13 +552,13 @@
         }
 
         //Initialize Autocomplete with BOTH input and onAutocomplete handlers
-        const searchInput = document.getElementById('marker-search');
-        const autocompleteInstance = M.Autocomplete.init(searchInput, {
+        searchInput = document.getElementById('marker-search');
+        M.Autocomplete.init(searchInput, {
             data: markerNames,
             minLength: 0,
             limit:3,
             onAutocomplete: function(selectedName) {
-                filterMarkersByName(selectedName.toLowerCase()); // Ensure this handles selection
+                filterMarkersByName(selectedName.toLowerCase());
             }
         });
 
@@ -580,7 +580,7 @@
             }
 
             markerLayer.eachLayer(function(layer) {
-                const markerName = layer.data.name.toLowerCase();
+                markerName = layer.data.name.toLowerCase();
                 if (markerName.includes(query)) {
                     if (!map.hasLayer(layer)) map.addLayer(layer);
 
@@ -597,11 +597,12 @@
         }
 
         //Clears search input
-        const clearBtn = document.getElementById('clear-search');
+        clearBtn = document.getElementById('clear-search');
 
         clearBtn.addEventListener('click', function () {
             searchInput.value = '';
             filterMarkers("none", "all"); //Reshow all markers
+            recenterMap();
         });
 
         // Brings up the building info pane on double click
@@ -1018,7 +1019,7 @@
 
         //This function isn't called in the current state of the website, but may be used/expanded later.
         function recenterMap() {
-            map.setView([10.646447, -61.400807], 13);
+            map.setView([10.642529, -61.400225], 13);
         }
         
         //Clean basemap no building names
