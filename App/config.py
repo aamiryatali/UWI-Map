@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timedelta
 
 UPLOAD_FOLDER = 'App/static/images'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
@@ -9,10 +10,10 @@ def load_config(app, overrides):
     else:
         config = {'ENV': os.environ.get('ENV', 'DEVELOPMENT')}
         delta = 10
-        if config['ENV'] == "PRODUCTION":
+        if config['ENV'] == "PRODUCTION" or config['ENV'] == "PRODUCTIONINIT":
             app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("SQLALCHEMY_DATABASE_URI")
             app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
-            app.config['JWT_ACCESS_TOKEN_EXPIRES'] = os.environ.get('JWT_ACCESS_TOKEN_EXPIRES')
+            app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=int(os.environ.get('JWT_ACCESS_TOKEN_EXPIRES')))
         else:
             app.config.from_object('App.default_config')
             

@@ -1115,19 +1115,20 @@
         }
         
         //Clean basemap no building names
+        /*
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
             minZoom: 16,
             maxZoom: 50,
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
             subdomains: 'abcd'
-        }).addTo(map);
+        }).addTo(map);*/
 
         //Original basemap with building names
-        /*L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             minZoom: 16,
             maxZoom: 50,
             attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        }).addTo(map);*/
+        }).addTo(map);
         // Prevent scrolling
         document.body.style.overflow = 'hidden';
 
