@@ -24,9 +24,12 @@
         var drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
 
+        M.toast({html: 'Tip: You can double click buildings!'})
+
         var drawControl = new L.Control.Draw({
             position: 'bottomright',
             draw: {
+                circlemarker: false,
                 circle: false,
                 polyline: false
             },

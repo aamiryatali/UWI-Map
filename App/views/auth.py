@@ -1,12 +1,10 @@
 from flask import Blueprint, render_template, jsonify, request, flash, send_from_directory, flash, redirect, url_for
 from flask_jwt_extended import jwt_required, current_user, unset_jwt_cookies, set_access_cookies
-from App.models import Building, Marker, Faculty, User
-
 from.index import index_views
 
 from App.controllers import (
     login,
-    get_all_users
+    get_all_users, get_markers, get_buildings, get_faculties
 )
 
 auth_views = Blueprint('auth_views', __name__, template_folder='../templates')
@@ -30,9 +28,9 @@ def identify_page():
 @auth_views.route('/adminView', methods=['GET'])
 @jwt_required()
 def adminView():
-    markers = Marker.query.all()
-    buildings = Building.query.all()
-    faculties = Faculty.query.all()
+    markers = get_markers()
+    buildings = get_buildings()
+    faculties = get_faculties()
     return render_template('admin/adminIndex.html', markers=markers, buildings=buildings, faculties=faculties)
 
 @auth_views.route('/login', methods=['POST'])

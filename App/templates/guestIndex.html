@@ -29,6 +29,7 @@
 
         var drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
+        M.toast({html: 'Tip: You can double click buildings!'})
 
         var mode = 'view';
         var currentMarker;
@@ -668,8 +669,6 @@
             } else {
                 floorHeader.checked = true;
             }
-            console.log(filterSelectedFaculties)
-            console.log(filterSelectedFloors)
         }
 
         //By default the plugin for the filters does not actually do what is needed. It doesn't stack filters ontop of each other

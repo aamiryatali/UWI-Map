@@ -1,4 +1,4 @@
-from .user import create_user 
+from .user import create_user
 from .building import create_building
 from .faculty import create_faculty
 from App.database import db
