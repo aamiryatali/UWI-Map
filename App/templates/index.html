@@ -238,7 +238,12 @@
                     let html = `
     <div class="row" id="addMarkerForm">
         <div class="col s12">
-        <button style="float: right; background: none; border: none; font-size: 1.5em; cursor: pointer;" onclick="cancelAdd()">×</button>
+            <div class="col s12" style="background-color: #d4edda;">
+                <p style="font-family: 'Pridi', cursive">Add Marker</p>
+                <button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="cancelAdd()">
+                    <i class="material-icons">exit_to_app</i>
+                </button>
+            </div>
             <form action="/addMarker" method="POST" enctype="multipart/form-data" style='padding:2em;'>
                 <div class="row">
                     <div class="input-field col s12">
@@ -324,7 +329,12 @@
                 let html = `
                 <div class="row" id="addBuildingForm">
         <div class="col s12">
-        <button style="float: right; background: none; border: none; font-size: 1.5em; cursor: pointer;" onclick="cancelAdd()">×</button>
+            <div class="col s12" style="background-color: #d4edda;">
+                <p style="font-family: 'Pridi', cursive">Add Building</p>
+                <button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="cancelAdd()">
+                    <i class="material-icons">exit_to_app</i>
+                </button>
+            </div>
             <form action="/addBuilding" enctype="multipart/form-data" method="POST" style='padding:2em;'>
                 <div class="row">
                     <div class="input-field col s12">
