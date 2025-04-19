@@ -5,12 +5,20 @@
 {{ super() }}
 
 {% block content %}
+    <div id="loading-bar" class="progress" style="position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; display: none; margin: 0;">
+        <div class="indeterminate"></div>
+    </div>
+    <div style="position: fixed; top: 10px; right: 6px; z-index: 900;">
+        <form action='/logout' style="margin-left: 1em;">
+            <button type="submit" name='logoutBtn' id='logoutBtn' class="btn waves-effect waves-light white black-text">Logout</button>
+        </form>
+        <form action='/' style='margin-top: 1em;'>
+            <button type="submit" name='logoutBtn' id='logoutBtn' class="btn waves-effect waves-light blue black-text">Guest View</button>
+        </form>
+    </div>
     <div id="map" style="height: 100vh; width: 100%; position: fixed; top: 0; left: 0;"></div>
     <div id="pane" class="card col s4" style="position: fixed; top: 50%; left: -300px; transform: translateY(-50%); z-index: 1000; width: 300px; background: white; overflow-x:hidden; transition: left 0.3s ease; height:100%">
     </div>
-    
-
-    
 {% endblock %}
 
 {% block code %}
@@ -31,7 +39,8 @@
             draw: {
                 circlemarker: false,
                 circle: false,
-                polyline: false
+                polyline: false,
+                rectangle: false
             },
             edit: {
                 featureGroup: drawnItems,
@@ -238,6 +247,9 @@
             drawnItems.clearLayers();
             addObjects(markers, buildings, faculties); // Call the addMarkers() function when the map loads
             searchFunctionality();
+            filterMarkers();
+            hideLoader();
+            map.zoomIn();
         }
         loadView();
         
@@ -851,7 +863,7 @@
         }
 
         map.on("zoomend", () => {
-            const show = map.getZoom() >= 18;
+            const show = map.getZoom() >= 19;
             document.querySelectorAll('.transparent-tooltip-building, .transparent-tooltip').forEach(el => {
               el.style.opacity = show ? '1' : '0';
               el.style.visibility = show ? 'visible' : 'hidden';
@@ -1138,20 +1150,20 @@
         }
         
         //Clean basemap no building names
-        /*
+        
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
             minZoom: 16,
             maxZoom: 50,
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
             subdomains: 'abcd'
-        }).addTo(map);*/
+        }).addTo(map);
 
         //Original basemap with building names
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        /*L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             minZoom: 16,
             maxZoom: 50,
             attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        }).addTo(map);
+        }).addTo(map);*/
         // Prevent scrolling
         document.body.style.overflow = 'hidden';
 
@@ -1336,5 +1348,14 @@
             }
             return null;
         }
+
+        function showLoader() {
+            document.getElementById('loading-bar').style.display = 'block';
+          }
+          
+        function hideLoader() {
+            document.getElementById('loading-bar').style.display = 'none';
+        }
+        showLoader();
 </script>
 {% endblock %}

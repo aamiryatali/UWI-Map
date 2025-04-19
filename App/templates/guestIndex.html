@@ -5,6 +5,38 @@
 {{ super() }}
 
 {% block content %}
+{% if is_authenticated %}
+    <div style="position: fixed; top: 10px; right: 6px; z-index: 900;">
+      <form action='/logout' style="margin-left: 1em;">
+        <button type="submit" name='logoutBtn' id='logoutBtn' class="btn waves-effect waves-light white black-text">Logout</button>
+      </form>
+      <form action='/adminView' style='margin-top: 1em;'>
+        <button type="submit" name='logoutBtn' id='logoutBtn' class="btn waves-effect waves-light red black-text">Admin View</button>
+      </form>
+    </div>
+    {% else %}
+    <div style="position: fixed; top: 10px; right: 6px; z-index: 900;">
+      <a class="btn-floating btn-large waves-effect waves-light white" id="login-icon" 
+         style="background-image: url('https://static.vecteezy.com/system/resources/thumbnails/009/292/244/small/default-avatar-icon-of-social-media-user-vector.jpg'); background-size: cover; background-position: center;" 
+         title="Admin Login"></a>
+      <div id="login-popup" style="display: none; position: absolute; top: 60px; right: 0; background: white; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); padding: 1em; border-radius: 8px; z-index: 1500;">
+          <form method="POST" action="/login">
+              <div class="input-field">
+                  <input placeholder="username" value="bob" name="username" type="text" class="validate" required>
+                  <label for="username" style="font-family: Arial, sans-serif !important;">Username</label>
+              </div>
+              <div class="input-field">
+                  <input placeholder="password" value="bobpass" name="password" type="password" class="validate" required>
+                  <label for="password" style="font-family: Arial, sans-serif !important;">Password</label>
+              </div>
+              <button type="submit" class="btn waves-effect waves-light">Login</button>
+          </form>
+      </div>
+    </div>
+    {% endif %}
+    <div id="loading-bar" class="progress" style="position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; display: none; margin: 0;">
+        <div class="indeterminate"></div>
+    </div>
     <div id="map" style="height: 100vh; width: 100%; position: fixed; top: 0; left: 0;"></div>
     <div id="pane" class="card col s4" style="position: fixed; top: 50%; left: -300px; transform: translateY(-50%); z-index: 1000; width: 300px; background: white; overflow-x:hidden; transition: left 0.3s ease; height:100%">
     </div>
@@ -14,12 +46,32 @@
 {% endblock %}
 
 {% block code %}
+<script>
+    const loginIcon = document.getElementById('login-icon');
+    const loginPopup = document.getElementById('login-popup');
+    if(loginIcon){
+      loginIcon.addEventListener('click', () => {
+          loginPopup.style.display = loginPopup.style.display === 'none' ? 'block' : 'none';
+      });
+      document.addEventListener('click', (e) => {
+          if (!loginPopup.contains(e.target) && e.target !== loginIcon) {
+              loginPopup.style.display = 'none';
+          }
+      });
+    }
+</script>
     <style>
         .leaflet-control-layers {
             transform: scale(1.05);
             bottom: 1em;
             left: 0.1em;
           }
+
+        .leaflet-control-zoom {
+            transform: scale(1.5);
+            bottom: 4.5em;
+            right: 0.5em;
+        }
     </style>
     <script type="text/javascript">
         var map = L.map('map').setView([10.642529, -61.400225], 13); // Sets the initial map position and zoom level
@@ -200,9 +252,20 @@
             drawnItems.clearLayers();
             addObjects(markers, buildings, faculties); // Call the addMarkers() function when the map loads
             searchFunctionality();
+            filterMarkers();
+            hideLoader();
+            map.zoomIn()
         }
         loadView();
         
+        L.control.locate({
+            position: 'bottomright',
+            strings: {
+                title: "Pan to current location"
+            },
+            keepCurrentZoomLevel: true
+        }).addTo(map);
+
         map.doubleClickZoom.disable();
         // Move zoom controls under the layer control toggle, with some CSS styling done in <style>
         map.zoomControl.setPosition('bottomright');
@@ -757,7 +820,7 @@
                 button.innerHTML = `<img src="https://www.freeiconspng.com/uploads/maps-center-direction-icon-24.png" alt="Recenter" style="width: 20px; height: 20px; border: 1px solid grey; border-radius: 50%;">`;
                 button.onclick = recenterMap;
 
-                button.style.marginBottom = '1.4em';
+                button.style.marginBottom = '4.3em';
                 return button;
             },
             onRemove: function() {}
@@ -768,5 +831,22 @@
         };
 
         L.control.recenter({ position: 'bottomright' }).addTo(map);
+
+        map.on("zoomend", () => {
+            const show = map.getZoom() >= 19;
+            document.querySelectorAll('.transparent-tooltip-building, .transparent-tooltip').forEach(el => {
+              el.style.opacity = show ? '1' : '0';
+              el.style.visibility = show ? 'visible' : 'hidden';
+            });
+        });
+
+        function showLoader() {
+            document.getElementById('loading-bar').style.display = 'block';
+          }
+          
+        function hideLoader() {
+            document.getElementById('loading-bar').style.display = 'none';
+        }
+        showLoader();
     </script>
 {% endblock %}
