@@ -38,7 +38,7 @@
         <div class="indeterminate"></div>
     </div>
     <div id="map" style="height: 100vh; width: 100%; position: fixed; top: 0; left: 0;"></div>
-    <div id="pane" class="card col s4" style="position: fixed; top: 50%; left: -300px; transform: translateY(-50%); z-index: 1000; width: 300px; background: white; overflow-x:hidden; transition: left 0.3s ease; height:100%">
+    <div id="pane" class="card col s4 grey lighten-4" style="position: fixed; top: 50%; left: -300px; transform: translateY(-50%); z-index: 1000; width: 300px; background: white; overflow-x:hidden; transition: left 0.3s ease; height:100%">
     </div>
     
 
@@ -473,7 +473,7 @@
             let html = `
     <div class="row" style="overflow-x: hidden;" id='editBuildingForm' name='editBuildingForm'>
         <div class="col s12">
-            <div class="col s12" style="background-color: #d4edda;">
+            <div class="col s12" style="background-color: #a5d6a7">
                 <p style="font-family: 'Pridi', cursive">Building Information</p>
                 <button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
                     <i class="material-icons">exit_to_app</i>
@@ -523,7 +523,7 @@
             let html = `
     <div class="row" id='markerInfo' name='markerInfo'>
         <div class="col s12">
-        <div class ="col s12" style="background-color: #d4edda;">
+        <div class ="col s12" style="background-color: #a5d6a7">
 	        <p style="font-family: 'Pridi', cursive">Marker Information</p>
         </div>
             <div>`
@@ -585,7 +585,7 @@
         }
 
         //This function sort of servers a double purpose right now. It closes the info pane, but in the case of cancelling a marker addition/edit, it also
-        //removes that marker from the map. Should probably separate.
+        //removes that marker from the map.
         function closeContainer(oldLat=null, oldLng=null){
             let pane = document.querySelector('#pane');
             pane.innerHTML = '';
@@ -602,11 +602,6 @@
                 drawnItems.removeLayer(currentBuilding);
             }
             mode='view'
-        }
-
-        //All functions moved to separate functions. This function remains empty for now.
-        function onMapClick(e){
-            //I used to be very long 
         }
 
         //This function isn't called in the current state of the website, but may be used/expanded later.

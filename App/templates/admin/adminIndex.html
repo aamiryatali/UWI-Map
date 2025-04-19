@@ -17,7 +17,7 @@
         </form>
     </div>
     <div id="map" style="height: 100vh; width: 100%; position: fixed; top: 0; left: 0;"></div>
-    <div id="pane" class="card col s4" style="position: fixed; top: 50%; left: -300px; transform: translateY(-50%); z-index: 1000; width: 300px; background: white; overflow-x:hidden; transition: left 0.3s ease; height:100%">
+    <div id="pane" class="card col s4 grey lighten-4" style="position: fixed; top: 50%; left: -300px; transform: translateY(-50%); z-index: 1000; width: 300px; background: white; overflow-x:hidden; transition: left 0.3s ease; height:100%">
     </div>
 {% endblock %}
 
@@ -34,6 +34,7 @@
 
         M.toast({html: 'Tip: You can double click buildings!'})
 
+        //Adds the drawing controls to the map
         var drawControl = new L.Control.Draw({
             position: 'bottomright',
             draw: {
@@ -49,6 +50,7 @@
             }
         });
 
+        //Adds the get location button
         L.control.locate({
             position: 'bottomright',
             strings: {
@@ -57,6 +59,7 @@
             keepCurrentZoomLevel: true
         }).addTo(map);
         
+        //Custom written extension of L.Control
         L.Control.Recenter = L.Control.extend({
             onAdd: function() {
                 var button = L.DomUtil.create('button', 'leaflet-control-recenter');
@@ -72,18 +75,18 @@
             return new L.Control.Recenter(opts);
         };
 
+        //Adds the recenter button to the map
         L.control.recenter({ position: 'bottomright' }).addTo(map);
 
-
-        //var marker = L.marker([10.6464474, -61.4008066]).addTo(map);
-        //marker.on('click', onMarkerClick);
         var mode = 'view';
         var currentMarker;
         var currentBuilding;
         var previousDrawing = null;
+        //Markers and buildings go on these 2 layers
         var drawingLayer = L.geoJSON().addTo(map)
         var markerLayer = L.layerGroup();
 
+        //Layergroups here will be used for filters
         var eng = L.layerGroup();
         var fst = L.layerGroup();
         var fhe = L.layerGroup();
@@ -193,7 +196,7 @@
         //Adds the filter button
         var layerControl = L.control.layers.tree(null, facultyLayers, { position: 'bottomright', collapsed: true}).addTo(map);
 
-        //These 2 sets will hold the currently selected filters to implement our custom filter functionality
+        //These 2 sets will hold the currently selected filters to implement our custom filter functionality. All selected by default
         var filterSelectedFaculties = new Set([
         "ENG",
         "FST",
@@ -234,6 +237,7 @@
             }, true);
         });
 
+        //This is our function that grabs data from the backend. Will be called anytime an the database is updated in someway.
         async function loadView(){
             await fetch('/get-data')
                 .then(response => response.json())
@@ -248,19 +252,19 @@
             addObjects(markers, buildings, faculties); // Call the addMarkers() function when the map loads
             searchFunctionality();
             filterMarkers();
-            hideLoader();
-            map.zoomIn();
+            hideLoader(); //Hide the loading bar once it finishes loaded
+            map.zoomIn(); //For some reason all the labels still show when the map first loads, so this zooms in the map 1 step which hides them. Small bug.
         }
         loadView();
         
         map.doubleClickZoom.disable();
         map.addControl(drawControl);
         
-        map.on('click', onMapClick);
+        //This is the logic that handles what happens when a new marker/drawing is placed on the map
         map.on(L.Draw.Event.CREATED, function(e){
             var layer = e.layer;
             var type = e.layerType;
-            drawnItems.addLayer(layer);
+            drawnItems.addLayer(layer); //Add the new item to the map
 
             //If the drawn item was a marker
             if(type === 'marker'){
@@ -338,6 +342,7 @@
                   minLength: 0
                 });
                 
+                //This event listener will interrupt the form submit to prevent the page from refreshing
                 document.getElementById('addMarkerForm').addEventListener('submit', addMarker);
                 //Materialize select fields need these 2 lines to of code to actually initialize the options for some reson
                 var elems = document.querySelectorAll('select');
@@ -348,15 +353,14 @@
             //If it was a building i.e. a shape:
             if(type === 'polygon' || type === 'circle' || type === 'rectangle'){
                 if(currentMarker){
-                    drawnItems.removeLayer(currentMarker);
+                    drawnItems.removeLayer(currentMarker); //Remove the previously placed unfinished marker if there was one
                 }
                 var geoJSON = layer.toGeoJSON();
                 geoJSONString = JSON.stringify(geoJSON);
-                console.log(geoJSONString)
                 if(mode === "redraw"){ //Check if this is a new building, or re-drawing a previous one.
                     if(currentBuilding != null && currentBuilding != undefined){
                         if(previousDrawing != null){
-                            drawnItems.removeLayer(previousDrawing);
+                            drawnItems.removeLayer(previousDrawing); //If redrawing a previous one, remove the previous drawing.
                         }    
                         previousDrawing = layer;
                         let field = document.querySelector('#newDrawingCoords');
@@ -368,6 +372,7 @@
                 closeContainer();
                 currentBuilding = layer;
                 let pane = document.querySelector('#pane');
+                //Add building form. Can't actually add anything unless the edit button is clicked.
                 let html = `
                 <div class="row" id="addBuildingForm">
         <div class="col s12">
@@ -428,8 +433,8 @@
     </div>`
                 pane.innerHTML = html;
                 pane.style.left = '10px';
+                //Event listener to interrupt form submission
                 document.getElementById('addBuildingForm').addEventListener('submit', addBuilding);
-
                 //Materialize select fields need these 2 lines to of code to actually initialize the options for some reson
                 var elems = document.querySelectorAll('select');
                 var instances = M.FormSelect.init(elems);
@@ -440,10 +445,11 @@
         // Move zoom controls under the layer control toggle, with some CSS styling done in <style>
         map.zoomControl.setPosition('bottomright');
 
+        //Event listener to interrupt addMarker form submission.
         async function addMarker(event){
-            event.preventDefault();
+            event.preventDefault(); //Prevent the default behavior
             let form = event.target.elements;
-            let formData = new FormData(event.target);
+            let formData = new FormData(event.target); //Grab the form, then make a new FormData object with the forms fields and values
 
             //Uses building name to get id
             buildingInput = document.getElementById('buildingAutocomplete').value.trim();
@@ -454,20 +460,21 @@
                 return;
             }
 
-            formData.append('buildingChoice', buildingId);
+            formData.append('buildingChoice', buildingId); //Appends the building choice to the form
             
+            //Sends a POST request to /addMarker with the data
             let response = await fetch('/addMarker', {
                 method: 'POST',
                 body: formData
             });
-            let result = await response.json()
+            let result = await response.json() //Get the result
             if('error' in result){
                 toast(result['error']);
             } else {
                 toast(result['success']);
                 event.target.reset();
                 closeContainer();
-                loadView();
+                loadView(); //Refresh the data on the map
             }
         }
 
@@ -486,8 +493,8 @@
         function addObjects(markers, buildings, faculties){
             for(marker of markers){
                 var newMarker = L.marker([marker['x'], marker['y']], {title: marker['name']}).addTo(map); // Adds each marker to the map
-                //The marker object attributes from the backend is basically just recreated here.
                 newMarker.on('click', onMarkerClick);
+                //The marker object attributes from the backend is basically just recreated here, as newMarker.data
                 newMarker.data = marker
                 newMarker.bindTooltip(marker['name'], {permanent: true, offset: [-15, 40], direction: "center", className: 'transparent-tooltip'});
                 var markerColorIcon;
@@ -643,10 +650,6 @@
         //Filtering logic (shared between input and selection)
         function filterMarkersByName(query) {
             if (!query) {
-                //If input is empty, show all markers
-                /*markerLayer.eachLayer(function(layer) {
-                    if (!map.hasLayer(layer)) map.addLayer(layer);
-                });*/
                 filterMarkers("none", "all");
                 return;
             }
@@ -699,7 +702,7 @@
             let html = `
     <div class="row" style="overflow-x: hidden;" id='editBuildingForm' name='editBuildingForm'>
         <div class="col s12">
-            <div class="col s12" style="background-color: #d4edda;">
+            <div class="col s12" style="background-color: #a5d6a7">
                 <p style="font-family: 'Pridi', cursive">Building Information</p>
                 <button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
                     <i class="material-icons">exit_to_app</i>
@@ -862,6 +865,7 @@
             }
         }
 
+        //Automatically hides labels if zoomed out to far to preserve performance
         map.on("zoomend", () => {
             const show = map.getZoom() >= 19;
             document.querySelectorAll('.transparent-tooltip-building, .transparent-tooltip').forEach(el => {
@@ -893,8 +897,8 @@
             marker = e.target
             currentMarker = marker;
             let pane = document.querySelector('#pane');
-            //Brings up the edit marker form. The form sends a POST request to editMarker, however you can't actually submit this form by default.
-            //By default the form actually just displays the marker info.
+            //Brings up the edit marker form. The form sends a POST request to editMarker(which is interrupted by an event listener), however 
+            //you can't actually submit this form by default. By default the form actually just displays the marker info.
             //There is an edit button at the bottom which, if clicked, replaces the contents of the form with editable fields, and a button which
             //actually submits the form. Very jank way of doing this.
             //The delete button is also here, but since a form can't send both a POST and a GET request to 2 differnet routes, the delete button just
@@ -902,7 +906,7 @@
             let html = `
     <div class="row" id='editMarkerForm' name='editMarkerForm'>
         <div class="col s12">
-        <div class ="col s12" style="background-color: #d4edda;">
+        <div class ="col s12" style="background-color: #a5d6a7">
 	        <p style="font-family: 'Pridi', cursive">Marker Information</p>
         </div>
             <form method="POST" action="/editMarker/${marker.data.id}" enctype="multipart/form-data">
@@ -998,7 +1002,6 @@
             }
         }
         
-        //"Manually" sends a GET request to /deleteMarker
         async function deleteMarker(id){
             let response = await fetch(`/deleteMarker/${id}`);
 
@@ -1092,6 +1095,7 @@
                     minLength: 0
                 });
 
+                //Enables dragging the marker and automatically updates the hidden fields in the form for the coordinates
                 currentMarker.dragging.enable();
                 currentMarker.on('dragend', function(){
                     x = document.querySelector('#x');
@@ -1138,19 +1142,12 @@
             mode='view'
         }
 
-        //All functions moved to separate functions. This function remains empty for now.
-        function onMapClick(e){
-            //I used to be very long
-            
-        }
-
         //This function isn't called in the current state of the website, but may be used/expanded later.
         function recenterMap() {
             map.setView([10.642529, -61.400225], 13);
         }
         
         //Clean basemap no building names
-        
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
             minZoom: 16,
             maxZoom: 50,
