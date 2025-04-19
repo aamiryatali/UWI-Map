@@ -4,13 +4,14 @@ from .marker import upload_file, get_clean_path_from_url, SUPABASE_BUCKET, supab
 from sqlalchemy.exc import IntegrityError
 from flask import jsonify, current_app
 
-def create_building(name, facultyID, drawingCoords):
-    newBuilding = Building(name=name, facultyID=facultyID, drawingCoords=drawingCoords)
+def create_building(name, facultyID, drawingCoords, description):
+    newBuilding = Building(name=name, facultyID=facultyID, drawingCoords=drawingCoords, description=description)
     try:
         db.session.add(newBuilding)
         db.session.commit()
     except IntegrityError as e:
         db.session.rollback()
+        print(e)
         return False
     except Exception as e:
         db.session.rollback()
@@ -27,9 +28,7 @@ def get_buildings():
     return Building.query.all()
 
 def add_building(data, imageFile):
-    if get_building(data['buildingName']):
-        return jsonify({'error': 'Building name already exists!'}), 400
-    building = create_building(data['buildingName'], data['facultyChoice'], data['geoJSON'])
+    building = create_building(data['buildingName'], data['facultyChoice'], data['geoJSON'], data['description'])
     if not building:
         return jsonify({'error': 'Could not create building'}), 400
     else:
@@ -46,6 +45,7 @@ def edit_building(id, data, imageFile):
     
     building.name = data['buildingName']
     building.facultyID = data['facultyChoice']
+    building.description  = data['description']
     if data['newDrawingCoords'] != "":
         building.drawingCoords = data['newDrawingCoords']
         
@@ -65,7 +65,7 @@ def edit_building(id, data, imageFile):
         db.session.commit()
     except IntegrityError as e:
         db.session.rollback()
-        return jsonify({'error' : 'Building name already exists'}), 400
+        return jsonify({'error' : 'Building already exists'}), 400
     except Exception as e:
         db.session.rollback()
         return jsonify({'error' : 'Could not edit building'}), 400

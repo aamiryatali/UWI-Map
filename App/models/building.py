@@ -4,16 +4,18 @@ from sqlalchemy.exc import IntegrityError
 
 class Building(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False, unique=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.String(500), nullable=True)
     drawingCoords = db.Column(db.JSON)
     markers = db.relationship('Marker', backref='building')
     facultyID = db.Column(db.Integer, db.ForeignKey('faculty.id'))
     image = db.Column(db.String(200), nullable=True, default='')
 
-    def __init__(self, name, facultyID, drawingCoords):
+    def __init__(self, name, facultyID, drawingCoords, description=None):
         self.name = name
         self.facultyID = facultyID
         self.drawingCoords = drawingCoords
+        self.description = description
 
     def addImage(self, image):
         self.image = image
@@ -60,6 +62,7 @@ class Building(db.Model):
         return {
             'id' : self.id,
             'name' : self.name,
+            'description' : self.description,
             'drawingCoords' : self.drawingCoords,
             'markers' : self.markers,
             'facultyID' : self.facultyID,

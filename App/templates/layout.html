@@ -113,12 +113,13 @@
         }
 
         .transparent-tooltip-building {
-            color: black;
-            font-weight: bold;
-            font-size: 12px;
-            border: none;
-            background: none;
-            box-shadow: none;
+          font-size: 12px;
+          font-weight: bold;
+          color: black;
+          background-color: transparent;
+          border: none;
+          box-shadow: none;
+          transform: none;
         }
 
         .leaflet-draw-toolbar {
@@ -309,7 +310,7 @@
             width: 12px !important;
             height: 12px !important;
         }
-        
+
     </style>
     <div id="content">{% block content %}{% endblock %}</div>
     <script>

@@ -387,6 +387,10 @@
                         </select>
                     </div>
                     <div class="input-field col s12">
+                        <label for="description" style="position:static;">Description (Optional)</label>
+                        <textarea class="materialize-textarea" name="description" id="description" rows="4" cols="12"></textarea>
+                    </div>
+                    <div class="input-field col s12">
                         <label for="imageUpload" style="position:static;">Upload Image (Optional)</label>
                     </div>
                     <div class="file-field input-field col s12">
@@ -534,6 +538,7 @@
                 newDrawingCoords.properties["faculty"] = building['facultyAbbr']
                 newDrawingCoords.properties["facultylong"] = building['facultyName']
                 newDrawingCoords.properties["image"] = building['image']
+                newDrawingCoords.properties["description"] = building['description']
                 drawingLayer.addData(newDrawingCoords)
             }
             
@@ -704,6 +709,13 @@
                     <p style="font-family: 'Pridi', cursive">${building.name}</p>
                     <h6 style="font-family: 'Bungee Spice', cursive">Faculty</h6>
                     <p style="font-family: 'Pridi', cursive">${building.facultylong}</p>
+                    <h6 style="font-family: 'Bungee Spice', cursive">Description</h6>`
+                    if(building.description != ''){
+                        html += `<p style="font-family: 'Pridi', cursive">${building.description}</p>`
+                    } else {
+                        html += `<p style="font-family: 'Pridi', cursive">No description provided</p>`
+                    }
+                html += `
                 </div>
                 <div name="buildingInfoFormButtons" id="buildingInfoFormButtons" class="card-action" style="position:static;">
                     <input type="button" onclick="editBuildingView()" class="waves-effect waves-light orange btn" value="Edit" style="font-family: 'Pridi', cursive">
@@ -772,7 +784,10 @@
                     html += `
                         </select>
                     </div>
-
+                    <div class="input-field col s12">
+                        <label for="description" style="position:static;">Description (Optional)</label>
+                        <textarea class="materialize-textarea" name="description" id="description" rows="4" cols="12">${currentBuilding.description}</textarea>
+                    </div>
                     <div>
                         <button class="waves-effect waves-light blue btn" type="button" onclick="reDraw()">Re-draw</button>
                         <div id="reDrawTooltip" name="reDrawTooltip"></div>
@@ -849,6 +864,14 @@
             }
         }
         
+        map.on("zoomend", () => {
+            const show = map.getZoom() >= 18;
+            document.querySelectorAll('.transparent-tooltip-building, .transparent-tooltip').forEach(el => {
+              el.style.opacity = show ? '1' : '0';
+              el.style.visibility = show ? 'visible' : 'hidden';
+            });
+        });
+
         function onMarkerClick(e){
             if(currentBuilding){
                 drawnItems.removeLayer(currentBuilding);
