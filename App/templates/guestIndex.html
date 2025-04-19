@@ -275,6 +275,7 @@
                 newDrawingCoords.properties["faculty"] = building['facultyAbbr']
                 newDrawingCoords.properties["facultylong"] = building['facultyName']
                 newDrawingCoords.properties["image"] = building['image']
+                newDrawingCoords.properties["description"] = building['description']
                 drawingLayer.addData(newDrawingCoords)
             }
             
@@ -430,6 +431,8 @@
                     <p style="font-family: 'Pridi', cursive">${building.name}</p>
                     <h6 style="font-family: 'Bungee Spice', cursive">Faculty</h6>
                     <p style="font-family: 'Pridi', cursive">${building.facultylong}</p>
+                    <h6 style="font-family: 'Bungee Spice', cursive">Description</h6>
+                    <p style="font-family: 'Pridi', cursive">${building.description}</p>
                 </div>
             </div>
             </form>
@@ -545,7 +548,7 @@
 
         //This function isn't called in the current state of the website, but may be used/expanded later.
         function recenterMap() {
-            map.setView([10.646447, -61.400807], 13);
+            map.setView([10.642529, -61.400225], 13);
         }
         
         //Clean basemap no building names
