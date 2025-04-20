@@ -52,6 +52,9 @@
         }
       }
 
+      
+      
+
         #map {
             height: 60vh;
             width: 60vw;
@@ -90,6 +93,7 @@
             font-size: 18px;
             background-clip: border-box;
             transform: scale(1.5);
+            margin-top: 0.6em;
         }
 
         .leaflet-control-zoom {
@@ -161,9 +165,7 @@
             color: #333;
         }
       
-        .leaflet-draw-toolbar {
-            margin-top: 0.6em;
-        }
+        
 
         .crop-box {
           width: 300px;
@@ -209,10 +211,7 @@
               font-size: 1em;
               color: #333;
           }
-        
-          .leaflet-draw-toolbar {
-              margin-top: 0.6em;
-          }
+
 
           #marker-search::placeholder {
             color: teal;
@@ -261,6 +260,7 @@
             width: 12px !important;
             height: 12px !important;
         }
+        
         
     </style>
     <div id="content">{% block content %}{% endblock %}</div>

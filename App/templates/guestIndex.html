@@ -7,11 +7,11 @@
 {% block content %}
 {% if is_authenticated %}
     <div style="position: fixed; top: 10px; right: 6px; z-index: 900;">
-      <form action='/logout' style="margin-left: 1em;">
-        <button type="submit" name='logoutBtn' id='logoutBtn' class="btn waves-effect waves-light white black-text">Logout</button>
+      <form action='/logout' style="margin-left: 4em; margin-top: 1em;">
+        <button type="submit" id='logoutBtn' class="btn waves-effect waves-light white black-text">Logout</button>
       </form>
-      <form action='/adminView' style='margin-top: 1em;'>
-        <button type="submit" name='logoutBtn' id='logoutBtn' class="btn waves-effect waves-light red black-text">Admin View</button>
+      <form action='/adminView' style='margin-top: 1em; margin-left: 2.3em;'>
+        <button type="submit" id='adminView' class="btn waves-effect waves-light red black-text">Admin View</button>
       </form>
     </div>
     {% else %}
@@ -72,6 +72,41 @@
             bottom: 4.5em;
             right: 0.5em;
         }
+
+        @media only screen and (max-width: 600px) {
+            .leaflet-control-zoom,
+            .leaflet-control-locate,
+            .leaflet-control-recenter,
+            .leaflet-control-layers,
+            .leaflet-control-layers-expanded,
+            .leaflet-draw-toolbar {
+              bottom: 6em !important; /* Raise higher on the screen */
+            }
+          
+            .leaflet-control-zoom {
+              bottom: 14.5em !important;
+            }
+            
+            .leaflet-draw {
+              bottom: 8.6em !important;
+            }
+  
+            .leaflet-control-locate {
+              bottom: 12.4em !important;
+            }
+          
+            .leaflet-control-recenter {
+              bottom: 12.5em !important;
+            }
+          
+            .leaflet-control-layers {
+              bottom: 12em !important;
+            }
+          
+            .leaflet-draw-toolbar {
+              bottom: 20.5em !important;
+            }
+          }
     </style>
     <script type="text/javascript">
         var map = L.map('map').setView([10.642529, -61.400225], 13); // Sets the initial map position and zoom level
@@ -254,9 +289,13 @@
             searchFunctionality();
             filterMarkers();
             hideLoader();
-            map.zoomIn()
         }
-        loadView();
+
+        async function firstView(){
+            await loadView();
+            map.zoomIn();
+        }
+        firstView();
         
         L.control.locate({
             position: 'bottomright',
@@ -409,6 +448,8 @@
             namesArray.forEach(function(name) {
                 markerNames[name] = null;
             });
+
+            
         }
 
         //Initialize Autocomplete with BOTH input and onAutocomplete handlers

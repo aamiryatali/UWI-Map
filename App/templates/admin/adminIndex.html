@@ -9,19 +9,57 @@
         <div class="indeterminate"></div>
     </div>
     <div style="position: fixed; top: 10px; right: 6px; z-index: 900;">
-        <form action='/logout' style="margin-left: 1em;">
-            <button type="submit" name='logoutBtn' id='logoutBtn' class="btn waves-effect waves-light white black-text">Logout</button>
+        <form action='/logout' style="margin-left: 4em; margin-top: 1em;">
+            <button type="submit" id='logoutBtn' class="btn waves-effect waves-light white black-text">Logout</button>
         </form>
-        <form action='/' style='margin-top: 1em;'>
-            <button type="submit" name='logoutBtn' id='logoutBtn' class="btn waves-effect waves-light blue black-text">Guest View</button>
+        <form action='/' style='margin-top: 1em; margin-left: 2.3em;'>
+            <button type="submit" id='guestView' class="btn waves-effect waves-light blue black-text">Guest View</button>
         </form>
     </div>
     <div id="map" style="height: 100vh; width: 100%; position: fixed; top: 0; left: 0;"></div>
     <div id="pane" class="card col s4 grey lighten-4" style="position: fixed; top: 50%; left: -300px; transform: translateY(-50%); z-index: 1000; width: 300px; background: white; overflow-x:hidden; transition: left 0.3s ease; height:100%">
     </div>
+
 {% endblock %}
 
 {% block code %}
+
+    <style>
+        @media only screen and (max-width: 600px) {
+            .leaflet-control-zoom,
+            .leaflet-control-locate,
+            .leaflet-control-recenter,
+            .leaflet-control-layers,
+            .leaflet-control-layers-expanded,
+            .leaflet-draw-toolbar {
+              bottom: 6em !important; /* Raise higher on the screen */
+            }
+          
+            .leaflet-control-zoom {
+              bottom: 10em !important;
+            }
+            
+            .leaflet-draw {
+              bottom: 8.6em !important;
+            }
+  
+            .leaflet-control-locate {
+              bottom: 12.4em !important;
+            }
+          
+            .leaflet-control-recenter {
+              bottom: 12.5em !important;
+            }
+          
+            .leaflet-control-layers {
+              bottom: 12em !important;
+            }
+          
+            .leaflet-draw-toolbar {
+              bottom: 20.5em !important;
+            }
+          }
+    </style>
     <script type="text/javascript">
         let buildingIdMap = {};
         var map = L.map('map').setView([10.642529, -61.400225], 13); // Sets the initial map position and zoom level
@@ -252,10 +290,14 @@
             addObjects(markers, buildings, faculties); // Call the addMarkers() function when the map loads
             searchFunctionality();
             filterMarkers();
-            hideLoader(); //Hide the loading bar once it finishes loaded
-            map.zoomIn(); //For some reason all the labels still show when the map first loads, so this zooms in the map 1 step which hides them. Small bug.
+            hideLoader();
         }
-        loadView();
+
+        async function firstView(){
+            await loadView();
+            map.zoomIn();
+        }
+        firstView();
         
         map.doubleClickZoom.disable();
         map.addControl(drawControl);
@@ -617,6 +659,8 @@
         namesArray = [];
 
         function searchFunctionality(){
+            markerNames = {} //Reset the marker names object
+            namesArray = [] //Reset the names array
             markerLayer.eachLayer(function(layer) {
                 namesArray.push(layer.data.name);
             });
@@ -628,6 +672,17 @@
             namesArray.forEach(function(name) {
                 markerNames[name] = null;
             });
+
+            searchInput = document.getElementById('marker-search');
+                M.Autocomplete.init(searchInput, {
+                data: markerNames,
+                minLength: 0,
+                limit:3,
+                onAutocomplete: function(selectedName) {
+                    filterMarkersByName(selectedName.toLowerCase());
+                }
+            });
+
         }
 
         //Initialize Autocomplete with BOTH input and onAutocomplete handlers
