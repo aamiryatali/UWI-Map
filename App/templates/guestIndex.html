@@ -615,7 +615,6 @@
             var elems = document.querySelectorAll('.materialboxed');
             var instances = M.Materialbox.init(elems, {
                 onCloseEnd: function() {
-                    // Reinitialize scrollable behavior for marker popup and edit panel
                     let pane = document.querySelector('#pane');
                     if (pane) {
                         pane.style.overflow = 'auto';

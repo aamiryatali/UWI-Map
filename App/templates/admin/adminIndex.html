@@ -802,7 +802,14 @@
             document.getElementById('editBuildingForm').addEventListener('submit', editBuilding);
             // Initialize Materialboxed for the image
             var elems = document.querySelectorAll('.materialboxed');
-            var instances = M.Materialbox.init(elems);
+            var instances = M.Materialbox.init(elems, {
+                onCloseEnd: function() {
+                    let pane = document.querySelector('#pane');
+                    if (pane) {
+                        pane.style.overflow = 'auto'; // Ensure scrolling is enabled
+                    }
+                }
+            });
             removeUnhideButton(); // Remove unhide button
         }
 
@@ -1018,7 +1025,7 @@
                     // Reinitialize scrollable behavior for marker popup and edit panel
                     let pane = document.querySelector('#pane');
                     if (pane) {
-                        pane.style.overflow = 'auto';
+                        pane.style.overflow = 'auto'; // Ensure scrolling is enabled
                     }
                 }
             });
