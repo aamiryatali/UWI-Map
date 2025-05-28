@@ -74,11 +74,11 @@ def edit_marker(id, data, imageFile):
         if marker.image != '':
             filename = marker.image
             path = get_clean_path_from_url(filename)
-            result = supabase.storage.from_(SUPABASE_BUCKET).remove([path])
+            result = supabase.storage.from_(SUPABASE_BUCKET).remove([path]) #Remove any old image
             if not result:
                 db.session.rollback()
                 return jsonify({'error': "Could not delete image associated"}), 400
-        secureFilename = upload_file(imageFile)
+        secureFilename = upload_file(imageFile) #Then add the new one
         marker.image = secureFilename
     
     try:

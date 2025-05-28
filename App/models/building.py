@@ -64,6 +64,7 @@ class Building(db.Model):
             'name' : self.name,
             'description' : self.description,
             'drawingCoords' : self.drawingCoords,
+            'description' : self.description,
             'markers' : self.markers,
             'facultyID' : self.facultyID,
             'image' : self.image,

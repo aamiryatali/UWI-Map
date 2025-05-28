@@ -1,12 +1,44 @@
 {% extends "layout.html" %}
-{% block title %}Flask MVC App{% endblock %}
-{% block page %}Flask MVC App{% endblock %}
+{% block title %}UWI Map{% endblock %}
+{% block page %}UWI Map{% endblock %}
 
 {{ super() }}
 
 {% block content %}
+{% if is_authenticated %}
+    <div style="position: fixed; top: 10px; right: 6px; z-index: 900;">
+      <form action='/logout' style="margin-left: 4em; margin-top: 1em;">
+        <button type="submit" id='logoutBtn' class="btn waves-effect waves-light white black-text">Logout</button>
+      </form>
+      <form action='/adminView' style='margin-top: 1em; margin-left: 2.3em;'>
+        <button type="submit" id='adminView' class="btn waves-effect waves-light red black-text">Admin View</button>
+      </form>
+    </div>
+    {% else %}
+    <div style="position: fixed; top: 10px; right: 6px; z-index: 900;">
+      <a class="btn-floating btn-large waves-effect waves-light white" id="login-icon" 
+         style="background-image: url('https://static.vecteezy.com/system/resources/thumbnails/009/292/244/small/default-avatar-icon-of-social-media-user-vector.jpg'); background-size: cover; background-position: center;" 
+         title="Admin Login"></a>
+      <div id="login-popup" style="display: none; position: absolute; top: 60px; right: 0; background: white; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); padding: 1em; border-radius: 8px; z-index: 1500;">
+          <form method="POST" action="/login">
+              <div class="input-field">
+                  <input placeholder="username" name="username" type="text" class="validate" required>
+                  <label for="username" style="font-family: Arial, sans-serif !important;">Username</label>
+              </div>
+              <div class="input-field">
+                  <input placeholder="password" name="password" type="password" class="validate" required>
+                  <label for="password" style="font-family: Arial, sans-serif !important;">Password</label>
+              </div>
+              <button type="submit" class="btn waves-effect waves-light">Login</button>
+          </form>
+      </div>
+    </div>
+    {% endif %}
+    <div id="loading-bar" class="progress" style="position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; display: none; margin: 0;">
+        <div class="indeterminate"></div>
+    </div>
     <div id="map" style="height: 100vh; width: 100%; position: fixed; top: 0; left: 0;"></div>
-    <div id="pane" class="card col s4" style="position: fixed; top: 50%; left: -300px; transform: translateY(-50%); z-index: 1000; width: 300px; background: white; overflow-x:hidden; transition: left 0.3s ease; height:100%">
+    <div id="pane" class="card col s4 grey lighten-4" style="position: fixed; top: 50%; left: -300px; transform: translateY(-50%); z-index: 1000; width: 300px; background: white; overflow-x:hidden; transition: left 0.3s ease; height:100%">
     </div>
     
 
@@ -14,11 +46,66 @@
 {% endblock %}
 
 {% block code %}
+<script>
+    const loginIcon = document.getElementById('login-icon');
+    const loginPopup = document.getElementById('login-popup');
+    if(loginIcon){
+      loginIcon.addEventListener('click', () => {
+          loginPopup.style.display = loginPopup.style.display === 'none' ? 'block' : 'none';
+      });
+      document.addEventListener('click', (e) => {
+          if (!loginPopup.contains(e.target) && e.target !== loginIcon) {
+              loginPopup.style.display = 'none';
+          }
+      });
+    }
+</script>
     <style>
         .leaflet-control-layers {
             transform: scale(1.05);
             bottom: 1em;
             left: 0.1em;
+          }
+
+        .leaflet-control-zoom {
+            transform: scale(1.5);
+            bottom: 4.5em;
+            right: 0.5em;
+        }
+
+        @media only screen and (max-width: 600px) {
+            .leaflet-control-zoom,
+            .leaflet-control-locate,
+            .leaflet-control-recenter,
+            .leaflet-control-layers,
+            .leaflet-control-layers-expanded,
+            .leaflet-draw-toolbar {
+              bottom: 6em !important; /* Raise higher on the screen */
+            }
+          
+            .leaflet-control-zoom {
+              bottom: 7.5em !important;
+            }
+            
+            .leaflet-draw {
+              bottom: 8.6em !important;
+            }
+  
+            .leaflet-control-locate {
+              bottom: 5.4em !important;
+            }
+          
+            .leaflet-control-recenter {
+              bottom: 5.5em !important;
+            }
+          
+            .leaflet-control-layers {
+              bottom: 5em !important;
+            }
+          
+            .leaflet-draw-toolbar {
+              bottom: 20.5em !important;
+            }
           }
     </style>
     <script type="text/javascript">
@@ -200,9 +287,24 @@
             drawnItems.clearLayers();
             addObjects(markers, buildings, faculties); // Call the addMarkers() function when the map loads
             searchFunctionality();
+            filterMarkers();
+            hideLoader();
         }
-        loadView();
+
+        async function firstView(){
+            await loadView();
+            map.zoomIn();
+        }
+        firstView();
         
+        L.control.locate({
+            position: 'bottomright',
+            strings: {
+                title: "Pan to current location"
+            },
+            keepCurrentZoomLevel: true
+        }).addTo(map);
+
         map.doubleClickZoom.disable();
         // Move zoom controls under the layer control toggle, with some CSS styling done in <style>
         map.zoomControl.setPosition('bottomright');
@@ -346,6 +448,8 @@
             namesArray.forEach(function(name) {
                 markerNames[name] = null;
             });
+
+            
         }
 
         //Initialize Autocomplete with BOTH input and onAutocomplete handlers
@@ -383,7 +487,7 @@
 
                     //If exact match, center and zoom
                     if (markerName === query) {
-                        map.setView(layer.getLatLng(), 18);
+                        map.setView(layer.getLatLng(), 19);
                         foundMatch = true;
                     }
 
@@ -410,7 +514,7 @@
             let html = `
     <div class="row" style="overflow-x: hidden;" id='editBuildingForm' name='editBuildingForm'>
         <div class="col s12">
-            <div class="col s12" style="background-color: #d4edda;">
+            <div class="col s12" style="background-color: #a5d6a7">
                 <p style="font-family: 'Pridi', cursive">Building Information</p>
                 <button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
                     <i class="material-icons">exit_to_app</i>
@@ -427,11 +531,11 @@
             }
             html += `
                 <div name="buildingInfoForm" id="buildingInfoForm" class="card-content">
-                    <h6 style="font-family: 'Bungee Spice', cursive">Name</h6>
+                    <h6 style="font-family: 'Pridi', cursive; color: #4caf50"><strong>Name</strong></h6>
                     <p style="font-family: 'Pridi', cursive">${building.name}</p>
-                    <h6 style="font-family: 'Bungee Spice', cursive">Faculty</h6>
+                    <h6 style="font-family: 'Pridi', cursive; color: #4caf50"><strong>Faculty</strong></h6>
                     <p style="font-family: 'Pridi', cursive">${building.facultylong}</p>
-                    <h6 style="font-family: 'Bungee Spice', cursive">Description</h6>
+                    <h6 style="font-family: 'Pridi', cursive; color: #4caf50"><strong>Description</strong></h6>
                     <p style="font-family: 'Pridi', cursive">${building.description}</p>
                 </div>
             </div>
@@ -460,7 +564,7 @@
             let html = `
     <div class="row" id='markerInfo' name='markerInfo'>
         <div class="col s12">
-        <div class ="col s12" style="background-color: #d4edda;">
+        <div class ="col s12" style="background-color: #a5d6a7">
 	        <p style="font-family: 'Pridi', cursive">Marker Information</p>
         </div>
             <div>`
@@ -486,13 +590,13 @@
             html += `
                 <div name="markerInfoForm" id="markerInfoForm" class="card-content">
                     <span class="card-title"></span>
-                    <h6 style="font-family: 'Bungee Spice', cursive">Name</h6>
+                    <h6 style="font-family: 'Pridi', cursive; color: #4caf50"><strong>Name</strong></h6>
                     <p style="font-family: 'Pridi', cursive">${marker.data.name}</p>
-                    <h6 style="font-family: 'Bungee Spice', cursive">Building</h6>
+                    <h6 style="font-family: 'Pridi', cursive; color: #4caf50"><strong>Building</strong></h6>
                     <p style="font-family: 'Pridi', cursive">${marker.data.buildingName}</p>
-                    <h6 style="font-family: 'Bungee Spice', cursive">Floor Number</h6>
+                    <h6 style="font-family: 'Pridi', cursive; color: #4caf50"><strong>Floor Number</strong></h6>
                     <p style="font-family: 'Pridi', cursive">${marker.data.floor}</p>
-                    <h6 style="font-family: 'Bungee Spice', cursive">Description</h6>`
+                    <h6 style="font-family: 'Pridi', cursive; color: #4caf50"><strong>Description</strong></h6>`
                     if(marker.data.description != ''){
                         html += `<p style="font-family: 'Pridi', cursive">${marker.data.description}</p>`
                     } else {
@@ -511,7 +615,6 @@
             var elems = document.querySelectorAll('.materialboxed');
             var instances = M.Materialbox.init(elems, {
                 onCloseEnd: function() {
-                    // Reinitialize scrollable behavior for marker popup and edit panel
                     let pane = document.querySelector('#pane');
                     if (pane) {
                         pane.style.overflow = 'auto';
@@ -522,7 +625,7 @@
         }
 
         //This function sort of servers a double purpose right now. It closes the info pane, but in the case of cancelling a marker addition/edit, it also
-        //removes that marker from the map. Should probably separate.
+        //removes that marker from the map.
         function closeContainer(oldLat=null, oldLng=null){
             let pane = document.querySelector('#pane');
             pane.innerHTML = '';
@@ -539,11 +642,6 @@
                 drawnItems.removeLayer(currentBuilding);
             }
             mode='view'
-        }
-
-        //All functions moved to separate functions. This function remains empty for now.
-        function onMapClick(e){
-            //I used to be very long 
         }
 
         //This function isn't called in the current state of the website, but may be used/expanded later.
@@ -757,7 +855,7 @@
                 button.innerHTML = `<img src="https://www.freeiconspng.com/uploads/maps-center-direction-icon-24.png" alt="Recenter" style="width: 20px; height: 20px; border: 1px solid grey; border-radius: 50%;">`;
                 button.onclick = recenterMap;
 
-                button.style.marginBottom = '1.4em';
+                button.style.marginBottom = '4.3em';
                 return button;
             },
             onRemove: function() {}
@@ -768,5 +866,22 @@
         };
 
         L.control.recenter({ position: 'bottomright' }).addTo(map);
+
+        map.on("zoomend", () => {
+            const show = map.getZoom() >= 19;
+            document.querySelectorAll('.transparent-tooltip-building, .transparent-tooltip').forEach(el => {
+              el.style.opacity = show ? '1' : '0';
+              el.style.visibility = show ? 'visible' : 'hidden';
+            });
+        });
+
+        function showLoader() {
+            document.getElementById('loading-bar').style.display = 'block';
+          }
+          
+        function hideLoader() {
+            document.getElementById('loading-bar').style.display = 'none';
+        }
+        showLoader();
     </script>
 {% endblock %}

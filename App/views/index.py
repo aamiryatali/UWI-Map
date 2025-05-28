@@ -35,20 +35,21 @@ def get_data():
     }
     return jsonify(data), 200
 
-    
-@index_views.route('/init', methods=['GET'])
-def init():
-    if os.environ.get("ENV") == "PRODUCTION":
-        flash('Server is currently running in production mode, initialize blocked')
-        return redirect(url_for('index_views.index_page'))
-    elif os.environ.get("ENV") == "DEVELOPMENT":
-        initialize()
-        return jsonify(message='db initialized!')
-    elif os.environ.get("ENV") == "PRODUCTIONINIT":
-        initialize()
-        return jsonify(message='db initialized!')
-    flash('Could not get deployment type(PRODUCTION/DEVELOPMENT)')
-    return redirect(url_for('index_views.index_page'))
+#The way this is configured right now, should prevent unintended initializations.
+#But you can never be too sure so I'm gonna comment this out.
+#@index_views.route('/init', methods=['GET'])
+#def init():
+#    if os.environ.get("ENV") == "PRODUCTION":
+#        flash('Server is currently running in production mode, initialize blocked')
+#        return redirect(url_for('index_views.index_page'))
+#    elif os.environ.get("ENV") == "DEVELOPMENT":
+#        initialize()
+#        return jsonify(message='db initialized!')
+#    elif os.environ.get("ENV") == "PRODUCTIONINIT":
+#        initialize()
+#        return jsonify(message='db initialized!')
+#    flash('Could not get deployment type(PRODUCTION/DEVELOPMENT)')
+#    return redirect(url_for('index_views.index_page'))
 
 @index_views.route('/health', methods=['GET'])
 def health_check():
