@@ -109,6 +109,67 @@
           }
     </style>
     <script type="text/javascript">
+        import app from './js/app.js';
+        import dataFunctions from './js/dataFunctions.js';
+        import htmlBuilder from './js/htmlBuilder.js';
+        import queryFunctions from './js/queryFunctions.js';
+        import uiHandler from './js/uiHandler.js';
+        
+        app.init()
+        uiHandler.init()
+        dataFunctions.addObjects()
+        queryFunctions.init()
+
+        
+        async function loadView(){
+            await fetch('/get-data')
+                .then(response => response.json())
+                .then(data => {
+                    markers = data['markers']
+                    buildings = data['buildings']
+                    faculties = data['faculties']
+            })
+            app.layers.markerLayer.clearLayers();
+            app.layers.drawingLayer.clearLayers();
+            app.mapdrawnItems.clearLayers();
+            dataFunctions.addObjects(markers, buildings, faculties); // Call the addMarkers() function when the map loads
+            queryFunctions.searchFunctionality();
+            queryFunctions.filterMarkers();
+            uiHandler.hideLoader();
+        }
+
+        async function firstView(){
+            await loadView();
+            app.instance.zoomIn();
+        }
+        firstView();
+        
+        function onBuildingClick(e) {
+            app.current.building = e.target.feature.properties;
+            currentBuilding = e.target.feature.properties;
+            let pane = document.querySelector('#pane');
+            let html = htmlBuilder.buildingInfo(app.current.building)
+
+            pane.innerHTML = html;
+            pane.style.left = '10px';
+            uiHandler.initMaterialBox();
+            uiHandler.removeUnhideButton();
+        }
+        
+        function onMarkerClick(e){
+            marker = e.target
+            app.current.marker = marker
+            currentMarker = marker;
+            let pane = document.querySelector('#pane');
+            let html = htmlBuilder.markerInfo(app.current.marker)
+
+            pane.innerHTML = html;
+            pane.style.left = '10px';
+            uiHandler.initMaterialBox();
+            uiHandler.removeUnhideButton();
+        }
+
+/*#################################################################################################################################### START
         var map = L.map('map').setView([10.642529, -61.400225], 13); // Sets the initial map position and zoom level
         var markers;
         var faculties;
@@ -273,30 +334,10 @@
               e.stopImmediatePropagation();
             }, true);
         });
-
-        async function loadView(){
-            await fetch('/get-data')
-                .then(response => response.json())
-                .then(data => {
-                    markers = data['markers']
-                    buildings = data['buildings']
-                    faculties = data['faculties']
-            })
-            markerLayer.clearLayers();
-            drawingLayer.clearLayers();
-            drawnItems.clearLayers();
-            addObjects(markers, buildings, faculties); // Call the addMarkers() function when the map loads
-            searchFunctionality();
-            filterMarkers();
-            hideLoader();
-        }
-
-        async function firstView(){
-            await loadView();
-            map.zoomIn();
-        }
-        firstView();
+#################################################################################################################################### END */
         
+        
+/*#################################################################################################################################### START
         L.control.locate({
             position: 'bottomright',
             strings: {
@@ -309,6 +350,8 @@
         // Move zoom controls under the layer control toggle, with some CSS styling done in <style>
         map.zoomControl.setPosition('bottomright');
 
+//#################################################################################################################################### END*/
+/*#################################################################################################################################### START
         //Alot goes on here. 
         function addObjects(markers, buildings, faculties){
             for(marker of markers){
@@ -473,9 +516,9 @@
         function filterMarkersByName(query) {
             if (!query) {
                 //If input is empty, show all markers
-                /*markerLayer.eachLayer(function(layer) {
-                    if (!map.hasLayer(layer)) map.addLayer(layer);
-                });*/
+                //markerLayer.eachLayer(function(layer) {
+                //    if (!map.hasLayer(layer)) map.addLayer(layer);
+                //});
                 filterMarkers("none", "all");
                 return;
             }
@@ -505,43 +548,46 @@
             filterMarkers("none", "all"); //Reshow all markers
             recenterMap();
         });
-
+#################################################################################################################################### END */
+//#################################################################################################################################### START
         // Brings up the building info pane on double click
-        function onBuildingClick(e) {
+        
+
+        /*function onBuildingClick(e) {
             currentBuilding = e.target.feature.properties; // Ensure currentBuilding is set correctly
             let pane = document.querySelector('#pane');
             let building = currentBuilding; // Use currentBuilding for consistency
             let html = `
-    <div class="row" style="overflow-x: hidden;" id='editBuildingForm' name='editBuildingForm'>
-        <div class="col s12">
-            <div class="col s12" style="background-color: #a5d6a7">
-                <p style="font-family: 'Pridi', cursive">Building Information</p>
-                <button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
-                    <i class="material-icons">exit_to_app</i>
-                </button>
-            </div>
-            <div>`;
-            if (building.image != '') {
-                html += `
-                <div class="card-image crop-box">
-                    <img class="materialboxed full-img" src="${building.image}" height="200" style="border-radius: 0; object-fit:cover; object-position: 20% 10%;">
-                </div>`;
-            } else {
-                html += `<div style="margin-top: 2.5em;"></div>`;
-            }
-            html += `
-                <div name="buildingInfoForm" id="buildingInfoForm" class="card-content">
-                    <h6 style="font-family: 'Pridi', cursive; color: #4caf50"><strong>Name</strong></h6>
-                    <p style="font-family: 'Pridi', cursive">${building.name}</p>
-                    <h6 style="font-family: 'Pridi', cursive; color: #4caf50"><strong>Faculty</strong></h6>
-                    <p style="font-family: 'Pridi', cursive">${building.facultylong}</p>
-                    <h6 style="font-family: 'Pridi', cursive; color: #4caf50"><strong>Description</strong></h6>
-                    <p style="font-family: 'Pridi', cursive">${building.description}</p>
+            <div class="row" style="overflow-x: hidden;" id='editBuildingForm' name='editBuildingForm'>
+                <div class="col s12">
+                    <div class="col s12" style="background-color: #a5d6a7">
+                        <p style="font-family: 'Pridi', cursive">Building Information</p>
+                        <button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
+                            <i class="material-icons">exit_to_app</i>
+                        </button>
+                    </div>
+                    <div>`;
+                    if (building.image != '') {
+                        html += `
+                        <div class="card-image crop-box">
+                            <img class="materialboxed full-img" src="${building.image}" height="200" style="border-radius: 0; object-fit:cover; object-position: 20% 10%;">
+                        </div>`;
+                    } else {
+                        html += `<div style="margin-top: 2.5em;"></div>`;
+                    }
+                    html += `
+                        <div name="buildingInfoForm" id="buildingInfoForm" class="card-content">
+                            <h6 style="font-family: 'Pridi', cursive; color: #4caf50"><strong>Name</strong></h6>
+                            <p style="font-family: 'Pridi', cursive">${building.name}</p>
+                            <h6 style="font-family: 'Pridi', cursive; color: #4caf50"><strong>Faculty</strong></h6>
+                            <p style="font-family: 'Pridi', cursive">${building.facultylong}</p>
+                            <h6 style="font-family: 'Pridi', cursive; color: #4caf50"><strong>Description</strong></h6>
+                            <p style="font-family: 'Pridi', cursive">${building.description}</p>
+                        </div>
+                    </div>
+                    </form>
                 </div>
-            </div>
-            </form>
-        </div>
-    </div>`;
+            </div>`;
             pane.innerHTML = html;
             pane.style.left = '10px';
 
@@ -549,9 +595,11 @@
             var elems = document.querySelectorAll('.materialboxed');
             var instances = M.Materialbox.init(elems);
             removeUnhideButton(); // Remove unhide button
-        }
+        }*/
 
-        function onMarkerClick(e){
+       
+
+        /*function onMarkerClick(e){
             marker = e.target
             currentMarker = marker;
             let pane = document.querySelector('#pane');
@@ -562,52 +610,52 @@
             //The delete button is also here, but since a form can't send both a POST and a GET request to 2 differnet routes, the delete button just
             //calls a JS function thats sends a GET request to the deleteMarker route.
             let html = `
-    <div class="row" id='markerInfo' name='markerInfo'>
-        <div class="col s12">
-        <div class ="col s12" style="background-color: #a5d6a7">
-	        <p style="font-family: 'Pridi', cursive">Marker Information</p>
-        </div>
-            <div>`
-            //Only add the image if one exists for the current marker
-            if(marker.data.image != ''){
-                html += `
-                <div class="card-image">
-                    <button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
-                        <i class="material-icons">exit_to_app</i>
-                    </button>
-                    <div class="crop-box">
-                        <img class="materialboxed full-img" src=${marker.data.image}>
+                <div class="row" id='markerInfo' name='markerInfo'>
+                    <div class="col s12">
+                    <div class ="col s12" style="background-color: #a5d6a7">
+	                    <p style="font-family: 'Pridi', cursive">Marker Information</p>
+                    </div>
+                        <div>`
+                        //Only add the image if one exists for the current marker
+                        if(marker.data.image != ''){
+                            html += `
+                            <div class="card-image">
+                                <button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
+                                    <i class="material-icons">exit_to_app</i>
+                                </button>
+                                <div class="crop-box">
+                                    <img class="materialboxed full-img" src=${marker.data.image}>
+                                </div>
+                            </div>
+                            `
+                
+                        } else {
+                            html += `<button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
+                                        <i class="material-icons">exit_to_app</i>
+                                     </button>
+                                     <div style="margin-top: 2.5em;"></div>`
+                        }
+                        html += `
+                            <div name="markerInfoForm" id="markerInfoForm" class="card-content">
+                                <span class="card-title"></span>
+                                <h6 style="font-family: 'Pridi', cursive; color: #4caf50"><strong>Name</strong></h6>
+                                <p style="font-family: 'Pridi', cursive">${marker.data.name}</p>
+                                <h6 style="font-family: 'Pridi', cursive; color: #4caf50"><strong>Building</strong></h6>
+                                <p style="font-family: 'Pridi', cursive">${marker.data.buildingName}</p>
+                                <h6 style="font-family: 'Pridi', cursive; color: #4caf50"><strong>Floor Number</strong></h6>
+                                <p style="font-family: 'Pridi', cursive">${marker.data.floor}</p>
+                                <h6 style="font-family: 'Pridi', cursive; color: #4caf50"><strong>Description</strong></h6>`
+                                if(marker.data.description != ''){
+                                    html += `<p style="font-family: 'Pridi', cursive">${marker.data.description}</p>`
+                                } else {
+                                    html += `<p style="font-family: 'Pridi', cursive">No description provided</p>`
+                                }
+                                
+                            html += `</div>
+                        </div>
+                        </form>
                     </div>
                 </div>
-                `
-
-            } else {
-                html += `<button class="btn-floating btn-small transparent" style="position: absolute; top: 10px; right: 10px; z-index: 1500;" onclick="closeContainer()">
-                            <i class="material-icons">exit_to_app</i>
-                         </button>
-                         <div style="margin-top: 2.5em;"></div>`
-            }
-            html += `
-                <div name="markerInfoForm" id="markerInfoForm" class="card-content">
-                    <span class="card-title"></span>
-                    <h6 style="font-family: 'Pridi', cursive; color: #4caf50"><strong>Name</strong></h6>
-                    <p style="font-family: 'Pridi', cursive">${marker.data.name}</p>
-                    <h6 style="font-family: 'Pridi', cursive; color: #4caf50"><strong>Building</strong></h6>
-                    <p style="font-family: 'Pridi', cursive">${marker.data.buildingName}</p>
-                    <h6 style="font-family: 'Pridi', cursive; color: #4caf50"><strong>Floor Number</strong></h6>
-                    <p style="font-family: 'Pridi', cursive">${marker.data.floor}</p>
-                    <h6 style="font-family: 'Pridi', cursive; color: #4caf50"><strong>Description</strong></h6>`
-                    if(marker.data.description != ''){
-                        html += `<p style="font-family: 'Pridi', cursive">${marker.data.description}</p>`
-                    } else {
-                        html += `<p style="font-family: 'Pridi', cursive">No description provided</p>`
-                    }
-                    
-                html += `</div>
-            </div>
-            </form>
-        </div>
-    </div>
             `;
             pane.innerHTML = html;
             pane.style.left = '10px';
@@ -622,11 +670,11 @@
                 }
             });
             removeUnhideButton(); // Remove unhide button
-        }
+        }*/
 
         //This function sort of servers a double purpose right now. It closes the info pane, but in the case of cancelling a marker addition/edit, it also
         //removes that marker from the map.
-        function closeContainer(oldLat=null, oldLng=null){
+        /*function closeContainer(oldLat=null, oldLng=null){
             let pane = document.querySelector('#pane');
             pane.innerHTML = '';
             pane.style.left = '-300px';
@@ -642,13 +690,15 @@
                 drawnItems.removeLayer(currentBuilding);
             }
             mode='view'
-        }
+        }*/
 
+//#################################################################################################################################### END
         //This function isn't called in the current state of the website, but may be used/expanded later.
         function recenterMap() {
             map.setView([10.642529, -61.400225], 13);
         }
-        
+      
+/*#################################################################################################################################### START 
         //Clean basemap no building names
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
             minZoom: 16,
@@ -658,11 +708,11 @@
         }).addTo(map);
 
         //Original basemap with building names
-        /*L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            minZoom: 16,
-            maxZoom: 50,
-            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        }).addTo(map);*/
+      //  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      //      minZoom: 16,
+      //      maxZoom: 50,
+      //      attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+      //  }).addTo(map);
         // Prevent scrolling
         document.body.style.overflow = 'hidden';
 
@@ -730,6 +780,8 @@
             touchStartX = undefined; // Reset touchStartX
         });
 
+#################################################################################################################################### END */
+/*#################################################################################################################################### START
         //Custom filter function as the default does not do what we need.
         function filterMarkers(filterName, mode){
             markerLayer.eachLayer(function(layer){ //For each marker
@@ -847,7 +899,8 @@
             }
             return null;
         }
-
+//#################################################################################################################################### END */
+/*
         L.Control.Recenter = L.Control.extend({
             onAdd: function() {
                 var button = L.DomUtil.create('button', 'leaflet-control-recenter');
@@ -866,7 +919,8 @@
         };
 
         L.control.recenter({ position: 'bottomright' }).addTo(map);
-
+*/
+/*#################################################################################################################################### START
         map.on("zoomend", () => {
             const show = map.getZoom() >= 19;
             document.querySelectorAll('.transparent-tooltip-building, .transparent-tooltip').forEach(el => {
@@ -883,5 +937,6 @@
             document.getElementById('loading-bar').style.display = 'none';
         }
         showLoader();
+//#################################################################################################################################### END */
     </script>
 {% endblock %}
